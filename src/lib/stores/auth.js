@@ -1,3 +1,4 @@
+// src/lib/stores/auth.js
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
 
@@ -20,25 +21,24 @@ function createAuthStore() {
 				const decodedToken = decodeToken(accessToken);
 
 				// Jika token valid dan bisa di-decode
-				if (decodedToken) {
+				if (decodedToken && !isTokenExpired(decodedToken)) {
 					// Simpan user dari decoded token
-					localStorage.setItem(
-						'user',
-						JSON.stringify({
-							id: decodedToken.id,
-							username: decodedToken.username,
-							role: decodedToken.role
-						})
-					);
+					const user = {
+						id: decodedToken.id,
+						username: decodedToken.username,
+						role: decodedToken.role
+					};
+
+					localStorage.setItem('user', JSON.stringify(user));
 
 					update((state) => ({
 						...state,
 						accessToken,
-						user: decodedToken,
+						user,
 						isAuthenticated: true
 					}));
 				} else {
-					// Token tidak valid atau tidak bisa di-decode
+					// Token tidak valid atau expired
 					localStorage.removeItem('accessToken');
 					localStorage.removeItem('user');
 				}
@@ -51,8 +51,51 @@ function createAuthStore() {
 		}
 	}
 
+	// Helper function untuk refresh token
+	const refreshToken = async () => {
+		try {
+			const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/refresh-token`, {
+				method: 'POST',
+				credentials: 'include' // Penting untuk mengirim cookie
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				const newAccessToken = data.data.newAccessToken;
+				const decodedToken = decodeToken(newAccessToken);
+
+				if (decodedToken) {
+					const user = {
+						id: decodedToken.id,
+						username: decodedToken.username,
+						role: decodedToken.role
+					};
+
+					if (browser) {
+						localStorage.setItem('accessToken', newAccessToken);
+						localStorage.setItem('user', JSON.stringify(user));
+					}
+
+					update((state) => ({
+						...state,
+						accessToken: newAccessToken,
+						user,
+						isAuthenticated: true
+					}));
+
+					return true;
+				}
+			}
+			return false;
+		} catch (error) {
+			console.error('Token refresh error:', error);
+			return false;
+		}
+	};
+
 	return {
 		subscribe,
+
 		login: async (username, password) => {
 			update((state) => ({ ...state, isLoading: true, error: null }));
 
@@ -76,8 +119,6 @@ function createAuthStore() {
 				}
 
 				const accessToken = data.data.accessToken;
-
-				// Decode token untuk mendapatkan user info
 				const decodedToken = decodeToken(accessToken);
 
 				if (!decodedToken) {
@@ -101,7 +142,8 @@ function createAuthStore() {
 					accessToken,
 					user,
 					isAuthenticated: true,
-					isLoading: false
+					isLoading: false,
+					error: null
 				}));
 
 				return true;
@@ -110,106 +152,96 @@ function createAuthStore() {
 				update((state) => ({
 					...state,
 					error: error.message,
-					isLoading: false
+					isLoading: false,
+					isAuthenticated: false,
+					accessToken: null,
+					user: null
 				}));
 				return false;
 			}
 		},
-		logout: () => {
+
+		logout: async () => {
+			try {
+				// Call backend logout untuk hapus refresh token
+				await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
+					method: 'POST',
+					credentials: 'include' // Penting untuk mengirim cookie refreshToken
+				});
+			} catch (err) {
+				console.error('Logout API error:', err);
+			}
+
+			// Clear local storage dan state
 			if (browser) {
 				localStorage.removeItem('accessToken');
 				localStorage.removeItem('user');
-
-				// Tambahkan API call untuk logout di server (hapus refreshToken)
-				fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
-					method: 'POST',
-					credentials: 'include' // Penting untuk mengirim cookie refreshToken
-				}).catch((err) => console.error('Logout error:', err));
 			}
 
-			set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false, error: null });
+			set({
+				user: null,
+				accessToken: null,
+				isAuthenticated: false,
+				isLoading: false,
+				error: null
+			});
 		},
+
 		checkAuth: async () => {
 			if (!browser) return false;
 
 			const accessToken = localStorage.getItem('accessToken');
 
-			if (!accessToken) return false;
-
-			try {
-				// Verifikasi token dengan backend
-				const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/verify`, {
-					method: 'GET',
-					headers: {
-						Authorization: `Bearer ${accessToken}`
-					},
-					credentials: 'include'
-				});
-
-				if (!response.ok) {
-					// Token tidak valid, hapus dari localStorage
-					localStorage.removeItem('accessToken');
-					localStorage.removeItem('user');
-					set({
-						user: null,
-						accessToken: null,
-						isAuthenticated: false,
-						isLoading: false,
-						error: null
-					});
-					return false;
-				}
-
-				// Decode token untuk mendapatkan user yang terupdate
-				const decodedToken = decodeToken(accessToken);
-
-				if (!decodedToken) {
-					localStorage.removeItem('accessToken');
-					localStorage.removeItem('user');
-					set({
-						user: null,
-						accessToken: null,
-						isAuthenticated: false,
-						isLoading: false,
-						error: null
-					});
-					return false;
-				}
-
-				// Update user dari decoded token
-				const user = {
-					id: decodedToken.id,
-					username: decodedToken.username,
-					role: decodedToken.role
-				};
-
-				localStorage.setItem('user', JSON.stringify(user));
-
-				update((state) => ({
-					...state,
-					accessToken,
-					user,
-					isAuthenticated: true
-				}));
-
-				return true;
-			} catch (error) {
-				console.error('Auth check error:', error);
-				localStorage.removeItem('accessToken');
-				localStorage.removeItem('user');
-				set({
-					user: null,
-					accessToken: null,
-					isAuthenticated: false,
-					isLoading: false,
-					error: null
-				});
-				return false;
+			if (!accessToken) {
+				// Tidak ada access token, coba refresh
+				return await refreshToken();
 			}
-		}
+
+			const decodedToken = decodeToken(accessToken);
+
+			// Cek apakah token akan expired dalam 5 menit
+			if (!decodedToken || isTokenExpired(decodedToken) || isTokenExpiringSoon(decodedToken)) {
+				// Token expired atau akan expired, coba refresh
+				const refreshed = await refreshToken();
+				if (!refreshed) {
+					// Refresh gagal, clear state
+					localStorage.removeItem('accessToken');
+					localStorage.removeItem('user');
+					set({
+						user: null,
+						accessToken: null,
+						isAuthenticated: false,
+						isLoading: false,
+						error: null
+					});
+					return false;
+				}
+				return true;
+			}
+
+			// Token masih valid, update state jika belum
+			const user = {
+				id: decodedToken.id,
+				username: decodedToken.username,
+				role: decodedToken.role
+			};
+
+			update((state) => ({
+				...state,
+				accessToken,
+				user,
+				isAuthenticated: true
+			}));
+
+			return true;
+		},
+
+		// Expose refresh function untuk digunakan API interceptor
+		refreshToken
 	};
 }
 
+// Helper functions
 function decodeToken(token) {
 	try {
 		// Split token menjadi 3 bagian (header, payload, signature)
@@ -222,6 +254,19 @@ function decodeToken(token) {
 		console.error('Error decoding token:', error);
 		return null;
 	}
+}
+
+function isTokenExpired(decodedToken) {
+	if (!decodedToken || !decodedToken.exp) return true;
+	const currentTime = Math.floor(Date.now() / 1000);
+	return decodedToken.exp < currentTime;
+}
+
+function isTokenExpiringSoon(decodedToken, bufferMinutes = 5) {
+	if (!decodedToken || !decodedToken.exp) return true;
+	const currentTime = Math.floor(Date.now() / 1000);
+	const bufferTime = bufferMinutes * 60; // Convert minutes to seconds
+	return decodedToken.exp < currentTime + bufferTime;
 }
 
 export const auth = createAuthStore();
