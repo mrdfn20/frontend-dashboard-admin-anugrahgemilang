@@ -101,9 +101,10 @@ export function formatCustomerForDisplay(customer) {
 	return {
 		...customer,
 		display_name: `${customer.title} ${customer.customer_name}`,
-		formatted_phone: customer.whatsapp_number
-			? customer.whatsapp_number.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3')
-			: '',
+		formatted_phone: formatPhone(customer.whatsapp_number),
+		formatted_gallon_price: formatGallonPrice(customer.price),
+		customer_avatar: getCustomerAvatar(customer),
+		customer_initial: getCustomerInitial(customer),
 		subscription_date_formatted: customer.subscription_date
 			? new Date(customer.subscription_date).toLocaleDateString('id-ID')
 			: '',
@@ -151,4 +152,88 @@ export function cleanCustomerData(customer) {
 	}
 
 	return cleaned;
+}
+
+// ====== NEW FORMATTING FUNCTIONS ======
+
+/**
+ * Format phone number with dashes
+ * @param {string} phone - Raw phone number
+ * @returns {string} Formatted phone number
+ */
+export function formatPhone(phone) {
+	if (!phone) return '-';
+	return phone.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3');
+}
+
+/**
+ * Format gallon price to "K" format
+ * @param {number|string} price - Raw price
+ * @returns {string} Formatted price
+ */
+export function formatGallonPrice(price) {
+	if (!price) return '-';
+	const numPrice = parseFloat(price);
+	if (numPrice >= 1000) {
+		return `${numPrice / 1000}K`;
+	}
+	return `${numPrice}`;
+}
+
+/**
+ * Get customer avatar URL with Google Drive transformation
+ * @param {Object} customer - Customer object
+ * @returns {string|null} Avatar URL or null
+ */
+export function getCustomerAvatar(customer) {
+	if (customer.customer_photo) {
+		// Transform Google Drive link to direct image URL
+		const driveLink = customer.customer_photo;
+
+		// Extract file ID from Google Drive URL
+		const fileIdMatch = driveLink.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+		if (fileIdMatch) {
+			const fileId = fileIdMatch[1];
+			return `https://lh3.googleusercontent.com/d/${fileId}`;
+		}
+
+		// Fallback to original link if extraction fails
+		return driveLink;
+	}
+	return null;
+}
+
+/**
+ * Get customer initial for fallback avatar
+ * @param {Object} customer - Customer object
+ * @returns {string} Customer initial
+ */
+export function getCustomerInitial(customer) {
+	return customer.customer_name ? customer.customer_name.charAt(0).toUpperCase() : 'N';
+}
+
+/**
+ * Format sub region display
+ * @param {Object} customer - Customer with region data
+ * @returns {Object} Formatted region info
+ */
+export function formatSubRegion(customer) {
+	return {
+		main: customer.sub_region_name || '-',
+		secondary: customer.region_name || ''
+	};
+}
+
+/**
+ * Get customer type label
+ * @param {number} typeId - Customer type ID
+ * @returns {string} Customer type label
+ */
+export function getCustomerTypeLabel(typeId) {
+	const types = {
+		1: 'Pelanggan Akhir (Rumah)',
+		2: 'Warung/Distributor',
+		3: 'Pabrik'
+	};
+	return types[typeId] || 'Unknown';
 }

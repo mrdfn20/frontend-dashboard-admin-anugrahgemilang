@@ -1,8 +1,9 @@
 // src/lib/stores/customers.js
 
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import customerService from '../services/customers.js';
 import { formatCustomerForDisplay } from '../models/customer.js';
+import toast from 'svelte-french-toast';
 
 /**
  * Customer Store - Manages customer data state
@@ -14,8 +15,45 @@ export const selectedCustomer = writable(null);
 export const isLoading = writable(false);
 export const error = writable(null);
 
+// 🆕 Search functionality stores
+export const searchTerm = writable('');
+
+// 🆕 Filtered customers based on search term
+export const filteredCustomers = derived([customers, searchTerm], ([$customers, $searchTerm]) => {
+	// Jika search term kosong, return semua customers
+	if (!$searchTerm.trim()) {
+		return $customers;
+	}
+
+	// 🆕 Check if search term is ID format (/123)
+	const idMatch = $searchTerm.match(/^\/(\d+)$/);
+	if (idMatch) {
+		const searchId = parseInt(idMatch[1]);
+		return $customers.filter((customer) => customer.id === searchId);
+	}
+
+	// Filter customers berdasarkan multiple fields (existing logic)
+	return $customers.filter(
+		(customer) =>
+			// Customer name
+			(customer.customer_name || '').toLowerCase().includes($searchTerm.toLowerCase()) ||
+			// Customer ID (string match for partial)
+			customer.id.toString().includes($searchTerm) ||
+			// WhatsApp number
+			(customer.whatsapp_number && customer.whatsapp_number.includes($searchTerm)) ||
+			// Address
+			(customer.address || '').toLowerCase().includes($searchTerm.toLowerCase()) ||
+			// Sub region name
+			(customer.sub_region_name || '').toLowerCase().includes($searchTerm.toLowerCase())
+	);
+});
+
 // Derived stores for computed values
 export const customersCount = derived(customers, ($customers) => $customers.length);
+export const filteredCustomersCount = derived(
+	filteredCustomers,
+	($filteredCustomers) => $filteredCustomers.length
+);
 
 export const formattedCustomers = derived(customers, ($customers) =>
 	$customers.map((customer) => formatCustomerForDisplay(customer))
@@ -36,6 +74,8 @@ export const customerActions = {
 		try {
 			const data = await customerService.getAllCustomers();
 			customers.set(data);
+			// Reset search ketika load customers baru
+			searchTerm.set('');
 			return data;
 		} catch (err) {
 			error.set(err.message);
@@ -78,13 +118,16 @@ export const customerActions = {
 		try {
 			const newCustomer = await customerService.createCustomer(customerData);
 
-			// Update local store
-			customers.update((list) => [...list, newCustomer.data || newCustomer]);
+			// Update store with proper response handling
+			const customerToAdd = newCustomer.data || newCustomer;
+			customers.update((list) => [...list, customerToAdd]);
 
+			// Success toast
+			toast.success('Customer berhasil ditambahkan!');
 			return newCustomer;
 		} catch (err) {
-			error.set(err.message);
-			console.error('Failed to create customer:', err);
+			// Error toast
+			toast.error(err.message || 'Gagal menambahkan customer');
 			throw err;
 		} finally {
 			isLoading.set(false);
@@ -115,9 +158,10 @@ export const customerActions = {
 				current && current.id === id ? { ...current, ...updatedCustomer } : current
 			);
 
+			toast.success('Customer berhasil diupdate!');
 			return updatedCustomer;
 		} catch (err) {
-			error.set(err.message);
+			toast.error(err.message || 'Gagal mengupdate customer');
 			console.error('Failed to update customer:', err);
 			throw err;
 		} finally {
@@ -142,9 +186,10 @@ export const customerActions = {
 			// Clear selected customer if it's the deleted one
 			selectedCustomer.update((current) => (current && current.id === id ? null : current));
 
+			toast.success('Customer berhasil dihapus!');
 			return true;
 		} catch (err) {
-			error.set(err.message);
+			toast.error(err.message || 'Gagal menghapus customer');
 			console.error('Failed to delete customer:', err);
 			throw err;
 		} finally {
@@ -153,38 +198,42 @@ export const customerActions = {
 	},
 
 	/**
-	 * Clear all stores (useful for logout)
+	 * Clear all stores (useful for logout, navigation)
 	 */
 	clearStore() {
 		customers.set([]);
 		selectedCustomer.set(null);
 		isLoading.set(false);
 		error.set(null);
+		// 🆕 Reset search term
+		searchTerm.set('');
 	},
 
 	/**
-	 * Search customers by multiple fields
-	 * @param {string} searchTerm - Search term
+	 * Set search term (untuk manual control jika diperlukan)
+	 * @param {string} term - Search term
 	 */
-	searchCustomers(searchTerm) {
-		if (!searchTerm.trim()) {
-			return derived(customers, ($customers) => $customers);
-		}
+	setSearchTerm(term) {
+		searchTerm.set(term || '');
+	},
 
-		return derived(customers, ($customers) =>
-			$customers.filter(
-				(customer) =>
-					// Customer name
-					(customer.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-					// Customer ID
-					customer.id.toString().includes(searchTerm) ||
-					// WhatsApp number
-					(customer.whatsapp_number && customer.whatsapp_number.includes(searchTerm)) ||
-					// Address
-					(customer.address || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-					// Sub region name
-					(customer.sub_region_name || '').toLowerCase().includes(searchTerm.toLowerCase())
-			)
-		);
+	/**
+	 * Clear search (shortcut)
+	 */
+	clearSearch() {
+		searchTerm.set('');
+	},
+
+	/**
+	 * 🔄 Updated: Search customers by multiple fields
+	 * Sekarang return current filtered result, bukan derived store
+	 * @param {string} term - Search term (optional, kalau kosong ambil dari store)
+	 */
+	searchCustomers(term) {
+		if (term !== undefined) {
+			searchTerm.set(term);
+		}
+		// Return current filtered customers
+		return get(filteredCustomers);
 	}
 };

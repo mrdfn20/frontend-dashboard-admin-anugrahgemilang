@@ -27,7 +27,7 @@
 	<div class="flex min-h-screen items-center justify-center px-4 py-6">
 		<!-- Background overlay -->
 		<div
-			class="bg-opacity-75 fixed inset-0 bg-gray-500 transition-opacity"
+			class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"
 			on:click={handleCancel}
 		></div>
 

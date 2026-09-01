@@ -5,8 +5,10 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { customerActions, selectedCustomer, isLoading, error } from '$lib/stores/customers.js';
+	import { api } from '$lib/services/api.js';
 	import CustomerForm from '$lib/components/customers/CustomerForm.svelte';
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
+	import AddBalanceModal from '$lib/components/customers/AddBalanceModal.svelte';
 
 	// Get customer ID from URL params
 	$: customerId = $page.params.id;
@@ -14,11 +16,61 @@
 	// Modal states
 	let showEditForm = false;
 	let showDeleteModal = false;
+	let showImageModal = false;
+	let showAddBalanceModal = false;
+	let selectedImage = null;
+
+	// Saldo & Galon (dimuat terpisah dari data profil, tidak lewat store customers)
+	let customerBalance = 0;
+	let gallonStock = null;
+	let gallonMovements = [];
+	let isLoadingExtras = true;
+
+	async function loadBalance() {
+		try {
+			const result = await api.customerBalance.getById(customerId);
+			customerBalance = result?.balance || 0;
+		} catch {
+			// 404 = belum pernah ada saldo/topup, dianggap 0 - bukan error blocking
+			customerBalance = 0;
+		}
+	}
+
+	async function loadGallonInfo() {
+		try {
+			const [stock, movements] = await Promise.all([
+				api.gallon.getStockByCustomer(customerId),
+				api.gallonMovements.getByCustomer(customerId)
+			]);
+			gallonStock = stock;
+			gallonMovements = Array.isArray(movements) ? movements : [];
+		} catch (err) {
+			console.error('Failed to load gallon info:', err);
+			gallonStock = null;
+			gallonMovements = [];
+		}
+	}
+
+	function formatCurrency(amount) {
+		return new Intl.NumberFormat('id-ID', {
+			style: 'currency',
+			currency: 'IDR',
+			minimumFractionDigits: 0
+		}).format(amount || 0);
+	}
+
+	function handleAddBalanceSuccess() {
+		showAddBalanceModal = false;
+		loadBalance();
+	}
 
 	// Load customer data
 	onMount(async () => {
 		if (customerId) {
 			await customerActions.loadCustomer(parseInt(customerId));
+			isLoadingExtras = true;
+			await Promise.all([loadBalance(), loadGallonInfo()]);
+			isLoadingExtras = false;
 		}
 	});
 
@@ -49,6 +101,42 @@
 
 	function goBack() {
 		goto('/dashboard/customers');
+	}
+
+	// Get customer avatar with fallback + Google Drive link transformation
+	function getCustomerAvatar(customer) {
+		if (customer.customer_photo) {
+			// Transform Google Drive link to direct image URL
+			const driveLink = customer.customer_photo;
+
+			// Extract file ID from Google Drive URL
+			const fileIdMatch = driveLink.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+			if (fileIdMatch) {
+				const fileId = fileIdMatch[1];
+				return `https://lh3.googleusercontent.com/d/${fileId}`;
+			}
+
+			// Fallback to original link if extraction fails
+			return driveLink;
+		}
+		return null;
+	}
+
+	// Get customer initial for fallback avatar
+	function getCustomerInitial(customer) {
+		return customer.customer_name ? customer.customer_name.charAt(0).toUpperCase() : 'N';
+	}
+
+	// Handle image click for modal preview
+	function handleImageClick(customer) {
+		if (getCustomerAvatar(customer)) {
+			selectedImage = {
+				url: getCustomerAvatar(customer),
+				title: customer.title,
+				name: customer.customer_name
+			};
+			showImageModal = true;
+		}
 	}
 
 	// Helper functions
@@ -191,67 +279,104 @@
 						<h3 class="text-lg font-medium text-gray-900">Informasi Pelanggan</h3>
 					</div>
 					<div class="border-t border-gray-200 px-6 py-4">
-						<dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-							<div>
-								<dt class="text-sm font-medium text-gray-500">ID Pelanggan</dt>
-								<dd class="mt-1 text-sm text-gray-900">#{$selectedCustomer.id}</dd>
-							</div>
-
-							<div>
-								<dt class="text-sm font-medium text-gray-500">Nama Lengkap</dt>
-								<dd class="mt-1 text-sm text-gray-900">
-									{$selectedCustomer.title}
-									{$selectedCustomer.customer_name}
-								</dd>
-							</div>
-
-							<div>
-								<dt class="text-sm font-medium text-gray-500">Tanggal Lahir</dt>
-								<dd class="mt-1 text-sm text-gray-900">
-									{formatDate($selectedCustomer.date_of_birth)}
-								</dd>
-							</div>
-
-							<div>
-								<dt class="text-sm font-medium text-gray-500">Nomor WhatsApp</dt>
-								<dd class="mt-1 text-sm text-gray-900">
-									{#if $selectedCustomer.whatsapp_number}
-										<a
-											href="https://wa.me/{$selectedCustomer.whatsapp_number.replace(/\D/g, '')}"
-											target="_blank"
-											class="text-green-600 hover:text-green-800"
+						<div class="flex gap-6">
+							<!-- Customer Photo -->
+							<div class="flex-shrink-0">
+								{#if getCustomerAvatar($selectedCustomer)}
+									<button on:click={() => handleImageClick($selectedCustomer)} class="group block">
+										<img
+											class="h-36 w-36 rounded-lg object-cover shadow-md transition-all duration-200 group-hover:scale-105 group-hover:shadow-lg"
+											src={getCustomerAvatar($selectedCustomer)}
+											alt="{$selectedCustomer.customer_name} photo"
+											loading="lazy"
+											on:error={(e) => {
+												e.target.style.display = 'none';
+												e.target.nextElementSibling.style.display = 'flex';
+											}}
+										/>
+										<div
+											class="bg-maroon-100 text-maroon-600 hidden h-36 w-36 items-center justify-center rounded-lg text-4xl font-bold shadow-md"
 										>
-											{formatPhone($selectedCustomer.whatsapp_number)}
-										</a>
-									{:else}
-										-
-									{/if}
-								</dd>
-							</div>
-
-							<div class="sm:col-span-2">
-								<dt class="text-sm font-medium text-gray-500">Alamat</dt>
-								<dd class="mt-1 text-sm text-gray-900">{$selectedCustomer.address}</dd>
-							</div>
-
-							<div>
-								<dt class="text-sm font-medium text-gray-500">Tipe Pelanggan</dt>
-								<dd class="mt-1">
-									<span
-										class="bg-maroon-100 text-maroon-800 inline-flex rounded-full px-2 text-xs leading-5 font-semibold"
+											{getCustomerInitial($selectedCustomer)}
+										</div>
+									</button>
+								{:else}
+									<div
+										class="bg-maroon-100 text-maroon-600 flex h-36 w-36 items-center justify-center rounded-lg text-4xl font-bold shadow-md"
 									>
-										{getCustomerTypeLabel($selectedCustomer.customer_type_id)}
-									</span>
-								</dd>
+										{getCustomerInitial($selectedCustomer)}
+									</div>
+								{/if}
 							</div>
 
-							<div>
-								<dt class="text-sm font-medium text-gray-500">Tanggal Bergabung</dt>
-								<dd class="mt-1 text-sm text-gray-900">
-									{formatDate($selectedCustomer.subscription_date)}
-								</dd>
+							<!-- Customer Information Grid -->
+							<div class="flex-1">
+								<dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+									<div>
+										<dt class="text-sm font-medium text-gray-500">ID Pelanggan</dt>
+										<dd class="mt-1 text-sm text-gray-900">#{$selectedCustomer.id}</dd>
+									</div>
+
+									<div>
+										<dt class="text-sm font-medium text-gray-500">Nama Lengkap</dt>
+										<dd class="mt-1 text-sm text-gray-900">
+											{$selectedCustomer.title}
+											{$selectedCustomer.customer_name}
+										</dd>
+									</div>
+
+									<div>
+										<dt class="text-sm font-medium text-gray-500">Tanggal Lahir</dt>
+										<dd class="mt-1 text-sm text-gray-900">
+											{formatDate($selectedCustomer.date_of_birth)}
+										</dd>
+									</div>
+
+									<div>
+										<dt class="text-sm font-medium text-gray-500">Nomor WhatsApp</dt>
+										<dd class="mt-1 text-sm text-gray-900">
+											{#if $selectedCustomer.whatsapp_number}
+												<a
+													href="https://wa.me/{$selectedCustomer.whatsapp_number.replace(
+														/\D/g,
+														''
+													)}"
+													target="_blank"
+													class="text-green-600 hover:text-green-800"
+												>
+													{formatPhone($selectedCustomer.whatsapp_number)}
+												</a>
+											{:else}
+												-
+											{/if}
+										</dd>
+									</div>
+
+									<div class="sm:col-span-2">
+										<dt class="text-sm font-medium text-gray-500">Alamat</dt>
+										<dd class="mt-1 text-sm text-gray-900">{$selectedCustomer.address}</dd>
+									</div>
+
+									<div>
+										<dt class="text-sm font-medium text-gray-500">Tipe Pelanggan</dt>
+										<dd class="mt-1">
+											<span
+												class="bg-maroon-100 text-maroon-800 inline-flex rounded-full px-2 text-xs leading-5 font-semibold"
+											>
+												{getCustomerTypeLabel($selectedCustomer.customer_type_id)}
+											</span>
+										</dd>
+									</div>
+
+									<div>
+										<dt class="text-sm font-medium text-gray-500">Tanggal Bergabung</dt>
+										<dd class="mt-1 text-sm text-gray-900">
+											{formatDate($selectedCustomer.subscription_date)}
+										</dd>
+									</div>
+								</dl>
 							</div>
-						</dl>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -332,6 +457,95 @@
 				{/if}
 			</div>
 		</div>
+
+		<!-- Saldo & Galon -->
+		<div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+			<!-- Saldo Pelanggan -->
+			<div class="rounded-lg bg-white shadow">
+				<div class="flex items-center justify-between px-6 py-4">
+					<h3 class="text-lg font-medium text-gray-900">Saldo Pelanggan</h3>
+					<button
+						on:click={() => (showAddBalanceModal = true)}
+						class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-3 py-1.5 text-sm font-medium text-white"
+					>
+						+ Tambah Saldo
+					</button>
+				</div>
+				<div class="border-t border-gray-200 px-6 py-4">
+					{#if isLoadingExtras}
+						<p class="text-sm text-gray-400">Memuat saldo...</p>
+					{:else}
+						<p class="text-maroon-700 text-3xl font-semibold">{formatCurrency(customerBalance)}</p>
+						<p class="mt-1 text-xs text-gray-500">
+							Saldo dipakai otomatis buat bayar hutang saat transaksi baru dibuat.
+						</p>
+					{/if}
+				</div>
+			</div>
+
+			<!-- Galon -->
+			<div class="rounded-lg bg-white shadow">
+				<div class="px-6 py-4">
+					<h3 class="text-lg font-medium text-gray-900">Galon</h3>
+				</div>
+				<div class="border-t border-gray-200 px-6 py-4">
+					{#if isLoadingExtras}
+						<p class="text-sm text-gray-400">Memuat data galon...</p>
+					{:else}
+						<div class="mb-4">
+							<p class="text-sm text-gray-500">Galon Belum Kembali</p>
+							<p
+								class="text-2xl font-semibold {(gallonStock?.unreturned_gallons || 0) > 0
+									? 'text-yellow-700'
+									: 'text-green-700'}"
+							>
+								{gallonStock?.unreturned_gallons ?? 0} galon
+							</p>
+						</div>
+
+						<p class="mb-2 text-sm font-medium text-gray-700">Riwayat Pergerakan</p>
+						{#if gallonMovements.length === 0}
+							<p class="text-sm text-gray-400">Belum ada riwayat pergerakan galon.</p>
+						{:else}
+							<div class="max-h-64 overflow-y-auto rounded-md border border-gray-100">
+								<table class="min-w-full divide-y divide-gray-100 text-sm">
+									<thead class="bg-gray-50">
+										<tr>
+											<th class="px-3 py-2 text-left font-medium text-gray-500">Tanggal</th>
+											<th class="px-3 py-2 text-right font-medium text-gray-500"
+												>Isi/Kosong/Kembali</th
+											>
+											<th class="px-3 py-2 text-right font-medium text-gray-500">Saldo Galon</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-gray-100">
+										{#each gallonMovements as movement (movement.transaction_id)}
+											<tr>
+												<td class="px-3 py-2 whitespace-nowrap text-gray-700">
+													{new Date(movement.transaction_date).toLocaleDateString('id-ID', {
+														year: 'numeric',
+														month: 'short',
+														day: 'numeric'
+													})}
+												</td>
+												<td class="px-3 py-2 text-right whitespace-nowrap text-gray-700">
+													{movement.gallon_filled} / {movement.gallon_empty} / {movement.gallon_returned}
+												</td>
+												<td
+													class="px-3 py-2 text-right font-medium whitespace-nowrap text-gray-900"
+												>
+													{movement.saldo_galon}
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			</div>
+		</div>
 	{:else}
 		<div class="py-12 text-center">
 			<svg
@@ -353,6 +567,46 @@
 			</p>
 		</div>
 	{/if}
+
+	<!-- Customer Image Preview Modal -->
+	{#if showImageModal && selectedImage}
+		<div class="fixed inset-0 z-50 overflow-y-auto">
+			<div class="flex min-h-screen items-center justify-center px-4 py-6">
+				<div
+					class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"
+					on:click={() => (showImageModal = false)}
+				></div>
+
+				<div class="relative z-10 max-h-[80vh] max-w-2xl rounded-lg bg-white p-6">
+					<div class="mb-4 flex items-center justify-between">
+						<h3 class="text-lg font-medium text-gray-900">
+							{selectedImage.title}
+							{selectedImage.name}
+						</h3>
+						<button
+							on:click={() => (showImageModal = false)}
+							class="text-gray-400 hover:text-gray-600"
+						>
+							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M6 18L18 6M6 6l12 12"
+								/>
+							</svg>
+						</button>
+					</div>
+
+					<img
+						src={selectedImage.url}
+						alt="{selectedImage.name} photo"
+						class="h-auto max-h-[60vh] w-full rounded-lg object-contain shadow-lg"
+					/>
+				</div>
+			</div>
+		</div>
+	{/if}
 </div>
 
 <!-- Modals -->
@@ -372,6 +626,16 @@
 		confirmClass="bg-red-600 hover:bg-red-700"
 		on:confirm={confirmDelete}
 		on:cancel={() => (showDeleteModal = false)}
+	/>
+{/if}
+
+{#if showAddBalanceModal && $selectedCustomer}
+	<AddBalanceModal
+		customerId={parseInt(customerId)}
+		customerName={$selectedCustomer.customer_name}
+		currentBalance={customerBalance}
+		on:success={handleAddBalanceSuccess}
+		on:cancel={() => (showAddBalanceModal = false)}
 	/>
 {/if}
 

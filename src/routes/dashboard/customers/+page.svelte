@@ -1,38 +1,41 @@
-<!-- Updated Customer Management Table -->
 <!-- src/routes/dashboard/customers/+page.svelte -->
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { customerActions, customers, isLoading, error } from '$lib/stores/customers.js';
+	import {
+		customerActions,
+		customers,
+		filteredCustomers,
+		filteredCustomersCount,
+		searchTerm,
+		isLoading,
+		error
+	} from '$lib/stores/customers.js';
 	import CustomerForm from '$lib/components/customers/CustomerForm.svelte';
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
+	import { infiniteScroll } from '$lib/actions/infiniteScroll.js';
 
 	// State management
-	let searchTerm = '';
 	let showAddForm = false;
 	let showEditForm = false;
 	let showDeleteModal = false;
 	let selectedCustomer = null;
-	let currentPage = 1;
+	let showImageModal = false;
+	let selectedImage = null;
 	let itemsPerPage = 10;
+	let visibleCount = itemsPerPage;
 
 	// Load customers on mount
 	onMount(async () => {
 		await customerActions.loadCustomers();
 	});
 
-	// Filtered customers based on search
-	$: filteredCustomers = searchTerm.trim()
-		? customerActions.searchCustomers(searchTerm)
-		: customers;
+	// 🆕 Infinite scroll: reveal bertahap dari filteredCustomers yang sudah full di-load
+	$: visibleCustomers = $filteredCustomers.slice(0, visibleCount);
+	$: hasMoreCustomers = visibleCount < $filteredCustomersCount;
 
-	// Pagination
-	$: totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
-	$: $filteredCustomers, (totalPages = Math.ceil($filteredCustomers.length / itemsPerPage));
-	$: paginatedCustomers = $filteredCustomers.slice(
-		(currentPage - 1) * itemsPerPage,
-		currentPage * itemsPerPage
-	);
+	// Reset jumlah tampil ketika search berubah
+	$: $searchTerm, (visibleCount = itemsPerPage);
 
 	// Event handlers
 	function handleAddCustomer() {
@@ -77,7 +80,7 @@
 		return phone.replace(/(\d{4})(\d{4})(\d{4})/, '$1-$2-$3');
 	}
 
-	// NEW: Format gallon price to "K" format
+	// Format gallon price to "K" format
 	function formatGallonPrice(price) {
 		if (!price) return '-';
 		const numPrice = parseFloat(price);
@@ -87,8 +90,7 @@
 		return `${numPrice}`;
 	}
 
-	// NEW: Get customer avatar with fallback
-	// NEW: Get customer avatar with fallback + Google Drive link transformation
+	// Get customer avatar with fallback + Google Drive link transformation
 	function getCustomerAvatar(customer) {
 		if (customer.customer_photo) {
 			// Transform Google Drive link to direct image URL
@@ -107,9 +109,22 @@
 		return null;
 	}
 
-	// NEW: Get customer initial for fallback avatar
+	// Get customer initial for fallback avatar
 	function getCustomerInitial(customer) {
 		return customer.customer_name ? customer.customer_name.charAt(0).toUpperCase() : 'N';
+	}
+
+	function handleImageClick(customer, event) {
+		event.stopPropagation(); // Prevent row click
+		const imageUrl = getCustomerAvatar(customer);
+		if (imageUrl) {
+			selectedImage = {
+				url: imageUrl,
+				name: customer.customer_name,
+				title: customer.title
+			};
+			showImageModal = true;
+		}
 	}
 </script>
 
@@ -151,8 +166,8 @@
 			<div class="relative">
 				<input
 					type="text"
-					placeholder="Cari pelanggan..."
-					bind:value={searchTerm}
+					placeholder="Cari pelanggan berdasarkan apapun... (gunakan /123 untuk cari ID spesifik)"
+					bind:value={$searchTerm}
 					class="focus:border-maroon-500 focus:ring-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 pl-10 text-sm"
 				/>
 				<svg
@@ -169,17 +184,54 @@
 						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 					/>
 				</svg>
+
+				<!-- 🆕 Clear search button -->
+				{#if $searchTerm}
+					<button
+						on:click={() => customerActions.clearSearch()}
+						class="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
+						title="Clear search"
+					>
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+					</button>
+				{/if}
 			</div>
 		</div>
 
 		<!-- Stats -->
 		<div class="bg-maroon-50 rounded-lg p-4">
 			<div class="text-center">
-				<p class="text-maroon-600 text-2xl font-bold">{filteredCustomers.length}</p>
-				<p class="text-maroon-600 text-sm">Total Pelanggan</p>
+				<p class="text-maroon-600 text-2xl font-bold">{$filteredCustomersCount}</p>
+				<p class="text-maroon-600 text-sm">
+					{$searchTerm ? 'Hasil Pencarian' : 'Total Pelanggan'}
+				</p>
+				{#if $searchTerm && $filteredCustomersCount !== $customers.length}
+					<p class="text-maroon-400 mt-1 text-xs">dari {$customers.length} total</p>
+				{/if}
 			</div>
 		</div>
 	</div>
+
+	{#if $searchTerm.startsWith('/') && $filteredCustomersCount === 1}
+		<div class="mb-4 rounded-lg bg-blue-50 p-3">
+			<p class="text-sm text-blue-700">
+				✅ Ditemukan pelanggan dengan ID {$searchTerm.slice(1)}
+			</p>
+		</div>
+	{:else if $searchTerm.startsWith('/') && $filteredCustomersCount === 0}
+		<div class="mb-4 rounded-lg bg-yellow-50 p-3">
+			<p class="text-sm text-yellow-700">
+				⚠️ Tidak ditemukan pelanggan dengan ID {$searchTerm.slice(1)}
+			</p>
+		</div>
+	{/if}
 
 	<!-- Error Message -->
 	{#if $error}
@@ -228,13 +280,11 @@
 							>
 								Alamat
 							</th>
-							<!-- NEW: Sub Region Column -->
 							<th
 								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							>
 								Sub Region
 							</th>
-							<!-- NEW: Gallon Price Column -->
 							<th
 								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							>
@@ -248,20 +298,26 @@
 						</tr>
 					</thead>
 					<tbody class="divide-y divide-gray-200 bg-white">
-						{#each paginatedCustomers as customer (customer.id)}
-							<tr class="hover:bg-gray-50">
+						{#each visibleCustomers as customer (customer.id)}
+							<tr
+								class="cursor-pointer transition-colors hover:bg-gray-50"
+								on:click={() => handleViewCustomer(customer)}
+								role="button"
+								tabindex="0"
+								on:keydown={(e) => e.key === 'Enter' && handleViewCustomer(customer)}
+							>
 								<!-- Pelanggan Column with Avatar -->
 								<td class="px-6 py-4 whitespace-nowrap">
 									<div class="flex items-center">
 										<div class="h-10 w-10 flex-shrink-0">
 											{#if getCustomerAvatar(customer)}
 												<img
-													class="h-10 w-10 rounded-full object-cover"
+													class="h-10 w-10 cursor-zoom-in rounded-full object-cover transition-opacity hover:opacity-80"
 													src={getCustomerAvatar(customer)}
 													alt="{customer.customer_name} photo"
 													loading="lazy"
+													on:click={(e) => handleImageClick(customer, e)}
 													on:error={(e) => {
-														// Fallback to initial if image fails to load
 														e.target.style.display = 'none';
 														e.target.nextElementSibling.style.display = 'flex';
 													}}
@@ -300,7 +356,7 @@
 									<div class="text-sm text-gray-900">{customer.address}</div>
 								</td>
 
-								<!-- NEW: Sub Region Column -->
+								<!-- Sub Region Column -->
 								<td class="px-6 py-4 whitespace-nowrap">
 									<div class="text-sm font-medium text-gray-900">
 										{customer.sub_region_name || '-'}
@@ -310,7 +366,7 @@
 									</div>
 								</td>
 
-								<!-- NEW: Gallon Price Column -->
+								<!-- Gallon Price Column -->
 								<td class="px-6 py-4 whitespace-nowrap">
 									<div class="text-sm font-medium text-gray-900">
 										{formatGallonPrice(customer.price)}
@@ -374,7 +430,7 @@
 						{:else}
 							<tr>
 								<td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
-									{searchTerm
+									{$searchTerm
 										? 'Tidak ada pelanggan yang sesuai dengan pencarian'
 										: 'Belum ada data pelanggan'}
 								</td>
@@ -384,54 +440,43 @@
 				</table>
 			</div>
 
-			<!-- Pagination -->
-			{#if totalPages > 1}
-				<div
-					class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6"
-				>
-					<div class="flex flex-1 justify-between sm:hidden">
-						<button
-							on:click={() => (currentPage = Math.max(1, currentPage - 1))}
-							disabled={currentPage === 1}
-							class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+			<!-- Infinite scroll footer -->
+			{#if $filteredCustomersCount > 0}
+				<div class="border-t border-gray-200 bg-white px-4 py-3 text-center sm:px-6">
+					<p class="text-sm text-gray-500">
+						Menampilkan <span class="font-medium">{visibleCustomers.length}</span> dari
+						<span class="font-medium">{$filteredCustomersCount}</span> pelanggan
+						{#if $searchTerm}
+							(filtered dari {$customers.length} total)
+						{/if}
+					</p>
+					{#if hasMoreCustomers}
+						<div
+							use:infiniteScroll={{
+								hasMore: hasMoreCustomers,
+								onLoadMore: () => (visibleCount += itemsPerPage)
+							}}
+							class="mt-2 flex justify-center py-2"
 						>
-							Previous
-						</button>
-						<button
-							on:click={() => (currentPage = Math.min(totalPages, currentPage + 1))}
-							disabled={currentPage === totalPages}
-							class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-						>
-							Next
-						</button>
-					</div>
-					<div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-						<div>
-							<p class="text-sm text-gray-700">
-								Showing <span class="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span>
-								to
-								<span class="font-medium"
-									>{Math.min(currentPage * itemsPerPage, filteredCustomers.length)}</span
-								>
-								of <span class="font-medium">{filteredCustomers.length}</span> results
-							</p>
+							<svg class="text-maroon-600 h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+								<circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle>
+								<path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
+							</svg>
 						</div>
-						<div>
-							<nav class="isolate inline-flex -space-x-px rounded-md shadow-sm">
-								{#each Array(totalPages) as _, i}
-									<button
-										on:click={() => (currentPage = i + 1)}
-										class="relative inline-flex items-center px-4 py-2 text-sm font-semibold {currentPage ===
-										i + 1
-											? 'bg-maroon-600 text-white'
-											: 'bg-white text-gray-900 hover:bg-gray-50'} ring-1 ring-gray-300 ring-inset"
-									>
-										{i + 1}
-									</button>
-								{/each}
-							</nav>
-						</div>
-					</div>
+					{:else}
+						<p class="mt-1 text-xs text-gray-400">Semua data sudah dimuat</p>
+					{/if}
 				</div>
 			{/if}
 		</div>
@@ -462,6 +507,46 @@
 	/>
 {/if}
 
+<!-- Customer Image Preview Modal -->
+{#if showImageModal && selectedImage}
+	<div class="fixed inset-0 z-50 overflow-y-auto">
+		<div class="flex min-h-screen items-center justify-center px-4 py-6">
+			<div
+				class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"
+				on:click={() => (showImageModal = false)}
+			></div>
+
+			<div class="relative z-10 max-h-[80vh] max-w-2xl rounded-lg bg-white p-6">
+				<div class="mb-4 flex items-center justify-between">
+					<h3 class="text-lg font-medium text-gray-900">
+						{selectedImage.title}
+						{selectedImage.name}
+					</h3>
+					<button
+						on:click={() => (showImageModal = false)}
+						class="text-gray-400 hover:text-gray-600"
+					>
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+					</button>
+				</div>
+
+				<img
+					src={selectedImage.url}
+					alt="{selectedImage.name} photo"
+					class="h-auto max-h-[60vh] w-full rounded-lg object-contain shadow-lg"
+				/>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <style>
 	:global(.bg-maroon-600) {
 		background-color: #800020;
@@ -471,6 +556,9 @@
 	}
 	:global(.text-maroon-600) {
 		color: #800020;
+	}
+	:global(.text-maroon-400) {
+		color: #b3002d;
 	}
 	:global(.bg-maroon-50) {
 		background-color: #fdf2f3;

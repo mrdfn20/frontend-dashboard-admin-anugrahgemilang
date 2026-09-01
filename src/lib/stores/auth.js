@@ -8,6 +8,7 @@ function createAuthStore() {
 		accessToken: null,
 		isAuthenticated: false,
 		isLoading: false,
+		isLoggingOut: false, // NEW: untuk logout
 		error: null
 	});
 
@@ -61,7 +62,7 @@ function createAuthStore() {
 
 			if (response.ok) {
 				const data = await response.json();
-				const newAccessToken = data.data.newAccessToken;
+				const newAccessToken = data.data.accessToken;
 				const decodedToken = decodeToken(newAccessToken);
 
 				if (decodedToken) {
@@ -162,29 +163,49 @@ function createAuthStore() {
 		},
 
 		logout: async () => {
+			// 🔄 Set logout loading state
+			update((state) => ({
+				...state,
+				isLoggingOut: true,
+				error: null
+			}));
+
 			try {
-				// Call backend logout untuk hapus refresh token
+				// 🌐 Call backend logout untuk hapus refresh token
 				await fetch(`${import.meta.env.VITE_API_URL}/auth/logout`, {
 					method: 'POST',
 					credentials: 'include' // Penting untuk mengirim cookie refreshToken
 				});
+
+				console.log('✅ Logout API call successful');
 			} catch (err) {
-				console.error('Logout API error:', err);
+				console.error('❌ Logout API error:', err);
+				// Continue with logout process even if API fails
+				// This ensures frontend state is always cleared
 			}
 
-			// Clear local storage dan state
-			if (browser) {
-				localStorage.removeItem('accessToken');
-				localStorage.removeItem('user');
+			// 🧹 FORCE CLEAR - Always execute regardless of API success/failure
+			try {
+				if (browser) {
+					localStorage.removeItem('accessToken');
+					localStorage.removeItem('user');
+					console.log('✅ LocalStorage cleared');
+				}
+			} catch (storageError) {
+				console.error('❌ LocalStorage clear error:', storageError);
 			}
 
+			// 🔄 Reset all state
 			set({
 				user: null,
 				accessToken: null,
 				isAuthenticated: false,
 				isLoading: false,
+				isLoggingOut: false, // Reset loading state
 				error: null
 			});
+
+			console.log('✅ Auth state cleared - logout complete');
 		},
 
 		checkAuth: async () => {

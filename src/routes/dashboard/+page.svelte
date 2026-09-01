@@ -14,11 +14,11 @@
 		try {
 			// Fetch all dashboard data in parallel
 			[summary, incomeSummary, gallonSummary, debtStatus, todayActivity] = await Promise.all([
-				api.getDashboardSummary(),
-				api.getIncomeSummary(),
-				api.getGallonSummary(),
-				api.getDebtStatus(),
-				api.getTodayActivity()
+				api.dashboard.getSummary(),
+				api.dashboard.getIncomeSummary(),
+				api.dashboard.getGallonSummary(),
+				api.dashboard.getDebtStatus(),
+				api.dashboard.getTodayActivity()
 			]);
 		} catch (err) {
 			error = err.message;
@@ -37,7 +37,7 @@
 	}
 </script>
 
-<div>
+<div class="p-6">
 	<!-- Greeting Header -->
 	<div class="mb-6">
 		<h1 class="text-2xl font-semibold text-gray-900">

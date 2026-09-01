@@ -3,6 +3,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { customerActions } from '$lib/stores/customers.js';
 	import { validateCustomer, defaultCustomer, cleanCustomerData } from '$lib/models/customer.js';
+	import { selectOnFocus } from '$lib/actions/selectOnFocus.js';
 
 	// Props
 	export let customer = null; // null for add, object for edit
@@ -47,10 +48,7 @@
 	async function handleSubmit() {
 		if (!validateForm()) return;
 
-		const cleanData = cleanCustomerData(formData);
-
 		isSubmitting = true;
-
 		try {
 			const cleanData = cleanCustomerData(formData);
 
@@ -60,10 +58,10 @@
 				await customerActions.createCustomer(cleanData);
 			}
 
-			dispatch('success');
+			dispatch('success'); // Modal will close
 		} catch (error) {
-			console.error('Failed to save customer:', error);
-			// You might want to show a toast or error message here
+			// Error already handled by toast in store
+			console.error('Form submission error:', error);
 		} finally {
 			isSubmitting = false;
 		}
@@ -86,7 +84,7 @@
 	<div class="flex min-h-screen items-center justify-center px-4 py-6">
 		<!-- Background overlay -->
 		<div
-			class="bg-opacity-75 fixed inset-0 bg-gray-500 transition-opacity"
+			class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"
 			on:click={handleCancel}
 		></div>
 
@@ -257,6 +255,7 @@
 								type="number"
 								min="0"
 								bind:value={formData.customer_gallon_stock}
+								use:selectOnFocus
 								placeholder="0"
 								class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
 							/>

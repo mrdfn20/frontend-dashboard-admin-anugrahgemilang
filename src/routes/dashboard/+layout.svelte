@@ -1,11 +1,13 @@
-<!-- src/routes/dashboard/+layout.svelte - Final Enhanced Version -->
+<!-- src/routes/dashboard/+layout.svelte -->
 <script>
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth';
 	import { sidebar } from '$lib/stores/sidebar';
+	import { searchActions } from '$lib/stores/search.js';
 	import SidebarSkeleton from '$lib/components/SidebarSkeleton.svelte';
+	import SearchOverlay from '$lib/components/search/SearchOverlay.svelte';
 
 	let sidebarElement;
 	let cleanupFocusTrap;
@@ -90,9 +92,17 @@
 		};
 	}
 
-	function handleLogout() {
-		auth.logout();
-		goto('/');
+	async function handleLogout() {
+		try {
+			console.log('🚀 Starting logout process...');
+			await auth.logout(); // Enhanced logout dengan loading state
+			console.log('✅ Logout completed, redirecting...');
+			goto('/');
+		} catch (error) {
+			console.error('❌ Logout error:', error);
+			// Force redirect even if error occurs
+			goto('/');
+		}
 	}
 
 	function isActiveRoute(route) {
@@ -109,10 +119,24 @@
 		}
 	}
 
+	// Ctrl+K / Cmd+K - buka global search dari halaman manapun
+	function handleGlobalKeydown(event) {
+		if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+			event.preventDefault();
+			if ($auth.user?.role !== 'Driver') {
+				searchActions.open();
+			}
+		}
+	}
+
 	// 🆕 Get page title dynamically
 	function getPageTitle() {
 		if (isActiveRoute('/dashboard/customers')) return 'Manajemen Pelanggan';
 		if (isActiveRoute('/dashboard/transactions')) return 'Manajemen Transaksi';
+		if (isActiveRoute('/dashboard/gallon')) return 'Manajemen Galon';
+		if (isActiveRoute('/dashboard/users')) return 'Manajemen User';
+		if (isActiveRoute('/dashboard/audit-logs')) return 'Audit Log';
+		if (isActiveRoute('/dashboard/armada')) return 'Kelola Armada';
 		if (isActiveRoute('/dashboard/payments')) return 'Manajemen Pembayaran';
 		if (isActiveRoute('/dashboard/reports')) return 'Laporan';
 		if ($page.url.pathname === '/dashboard') return 'Dashboard';
@@ -126,7 +150,26 @@
 
 	// 🆕 Calculate swipe opacity for visual feedback
 	$: swipeOpacity = $sidebar.isSwipeActive ? Math.max(0.3, 1 - $sidebar.swipeProgress / 100) : 1;
+
+	function getUserInitial(username) {
+		if (!username || username.trim() === '') return 'WR';
+		const trimmed = username.trim().toUpperCase();
+		return trimmed.length === 1 ? trimmed : trimmed.substring(0, 2);
+	}
+
+	// 🆕 State untuk bounce animation
+	let isUserBouncing = false;
+
+	// 🆕 Trigger bounce animation
+	function triggerBounce() {
+		isUserBouncing = true;
+		setTimeout(() => {
+			isUserBouncing = false;
+		}, 600); // Duration sesuai dengan CSS animation
+	}
 </script>
+
+<svelte:window on:keydown={handleGlobalKeydown} />
 
 <div class="min-h-screen bg-gray-100">
 	<!-- 🆕 Loading Skeleton - Show while sidebar is loading -->
@@ -249,63 +292,113 @@
 					<span class="transition-all duration-200 group-hover:translate-x-1">Pelanggan</span>
 				</a>
 
-				<!-- Coming Soon Items with Better Styling -->
-				<div class="space-y-1 opacity-60">
-					<!-- Transactions -->
-					<div
-						class="group flex cursor-not-allowed items-center rounded-md px-2 py-3 text-base font-medium"
+				<!-- Transactions (& Pembayaran Hutang menyatu di halaman ini) -->
+				<a
+					href="/dashboard/transactions"
+					on:click={handleMenuClick}
+					class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+						   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+						   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+						   {isActiveRoute('/dashboard/transactions')
+						? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+						: ''}"
+					role="listitem"
+					aria-current={isActiveRoute('/dashboard/transactions') ? 'page' : undefined}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="mr-3 h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-							/>
-						</svg>
-						<span>Transaksi</span>
-						<span class="ml-auto rounded-full bg-yellow-500/20 px-2 py-1 text-xs text-yellow-200"
-							>Soon</span
-						>
-					</div>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+						/>
+					</svg>
+					<span class="transition-all duration-200 group-hover:translate-x-1">Transaksi</span>
+				</a>
 
-					<!-- Payments -->
-					<div
-						class="group flex cursor-not-allowed items-center rounded-md px-2 py-3 text-base font-medium"
+				<!-- Gallon -->
+				<a
+					href="/dashboard/gallon"
+					on:click={handleMenuClick}
+					class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+						   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+						   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+						   {isActiveRoute('/dashboard/gallon')
+						? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+						: ''}"
+					role="listitem"
+					aria-current={isActiveRoute('/dashboard/gallon') ? 'page' : undefined}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="mr-3 h-6 w-6"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-							/>
-						</svg>
-						<span>Pembayaran</span>
-						<span class="ml-auto rounded-full bg-yellow-500/20 px-2 py-1 text-xs text-yellow-200"
-							>Soon</span
-						>
-					</div>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+						/>
+					</svg>
+					<span class="transition-all duration-200 group-hover:translate-x-1">Galon</span>
+				</a>
 
-					<!-- Reports -->
-					<div
-						class="group flex cursor-not-allowed items-center rounded-md px-2 py-3 text-base font-medium"
+				<!-- Hutang (semua role bisa lihat; tombol bayar disembunyikan di halamannya utk Driver) -->
+				<a
+					href="/dashboard/payments"
+					on:click={handleMenuClick}
+					class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+						   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+						   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+						   {isActiveRoute('/dashboard/payments')
+						? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+						: ''}"
+					role="listitem"
+					aria-current={isActiveRoute('/dashboard/payments') ? 'page' : undefined}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+						/>
+					</svg>
+					<span class="transition-all duration-200 group-hover:translate-x-1">Hutang</span>
+				</a>
+
+				{#if $auth.user?.role === 'Admin'}
+					<!-- User Management (Admin only) -->
+					<a
+						href="/dashboard/users"
+						on:click={handleMenuClick}
+						class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+							   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+							   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+							   {isActiveRoute('/dashboard/users')
+							? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+							: ''}"
+						role="listitem"
+						aria-current={isActiveRoute('/dashboard/users') ? 'page' : undefined}
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
-							class="mr-3 h-6 w-6"
+							class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
 							fill="none"
 							viewBox="0 0 24 24"
 							stroke="currentColor"
@@ -314,15 +407,104 @@
 								stroke-linecap="round"
 								stroke-linejoin="round"
 								stroke-width="2"
-								d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V7a2 2 0 012-2h2a2 2 0 012 2v2M7 7h10"
+								d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
 							/>
 						</svg>
-						<span>Laporan</span>
-						<span class="ml-auto rounded-full bg-yellow-500/20 px-2 py-1 text-xs text-yellow-200"
-							>Soon</span
+						<span class="transition-all duration-200 group-hover:translate-x-1"
+							>User Management</span
 						>
-					</div>
-				</div>
+					</a>
+
+					<!-- Audit Log (Admin only) -->
+					<a
+						href="/dashboard/audit-logs"
+						on:click={handleMenuClick}
+						class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+							   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+							   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+							   {isActiveRoute('/dashboard/audit-logs')
+							? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+							: ''}"
+						role="listitem"
+						aria-current={isActiveRoute('/dashboard/audit-logs') ? 'page' : undefined}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
+						</svg>
+						<span class="transition-all duration-200 group-hover:translate-x-1">Audit Log</span>
+					</a>
+
+					<!-- Kelola Armada (Admin only) -->
+					<a
+						href="/dashboard/armada"
+						on:click={handleMenuClick}
+						class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+							   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+							   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+							   {isActiveRoute('/dashboard/armada')
+							? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+							: ''}"
+						role="listitem"
+						aria-current={isActiveRoute('/dashboard/armada') ? 'page' : undefined}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M8 17h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4zm-8 0V9a1 1 0 011-1h6l4 4v5m-11 0H4a1 1 0 01-1-1v-3a1 1 0 011-1h1m14 0h1a1 1 0 001-1v-2a1 1 0 00-.293-.707L17 8"
+							/>
+						</svg>
+						<span class="transition-all duration-200 group-hover:translate-x-1">Kelola Armada</span>
+					</a>
+				{/if}
+
+				<!-- Reports -->
+				<a
+					href="/dashboard/reports"
+					on:click={handleMenuClick}
+					class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+						   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+						   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+						   {isActiveRoute('/dashboard/reports')
+						? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+						: ''}"
+					role="listitem"
+					aria-current={isActiveRoute('/dashboard/reports') ? 'page' : undefined}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V7a2 2 0 012-2h2a2 2 0 012 2v2M7 7h10"
+						/>
+					</svg>
+					<span class="transition-all duration-200 group-hover:translate-x-1">Laporan</span>
+				</a>
 			</nav>
 
 			<!-- 🆕 Enhanced Keyboard shortcuts hint with animations -->
@@ -334,6 +516,7 @@
 					<div class="space-y-1 rounded-lg bg-black/10 p-3 backdrop-blur-sm">
 						<p class="font-medium text-white/90">💡 Shortcuts:</p>
 						<p>ESC - Close | Ctrl+Shift+B - Toggle</p>
+						<p>Ctrl+K - Cari</p>
 						{#if $sidebar.isMobile}
 							<p>👆 Swipe left to close</p>
 						{/if}
@@ -395,34 +578,90 @@
 			</div>
 
 			<div class="flex items-center space-x-4">
-				<!-- User dropdown with enhanced styling -->
+				<!-- Global Search (Admin & Editor saja, Driver tidak punya akses BE-nya) -->
+				{#if $auth.user?.role !== 'Driver'}
+					<button
+						type="button"
+						on:click={searchActions.open}
+						title="Cari (Ctrl+K)"
+						class="focus:ring-maroon-500/20 rounded-lg p-2 text-gray-600 transition-all duration-200
+							   hover:scale-110 hover:bg-gray-100 hover:text-gray-900 hover:shadow-md focus:bg-gray-100
+							   focus:text-gray-900 focus:ring-2 focus:outline-none active:scale-95"
+					>
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+							/>
+						</svg>
+					</button>
+				{/if}
+
+				<!-- User Avatar dengan Username Initial -->
 				<div class="relative flex items-center">
 					{#if $sidebar.isLoading}
-						<div class="h-8 w-8 animate-pulse rounded-full bg-gray-300"></div>
-						<div class="ml-3 h-8 w-16 animate-pulse rounded bg-gray-300"></div>
+						<div class="h-10 w-10 animate-pulse rounded-full bg-gray-300"></div>
+						<div class="ml-3 h-6 w-16 animate-pulse rounded bg-gray-300"></div>
 					{:else}
+						<!-- 🆕 Custom User Avatar dengan Initial -->
 						<button
 							type="button"
-							class="focus:ring-maroon-500 flex max-w-xs items-center rounded-full bg-gray-800 text-sm
-								   transition-all duration-200 hover:scale-105 hover:shadow-lg
-								   focus:ring-2 focus:ring-offset-2 focus:outline-none active:scale-95"
-							title="User menu"
+							on:click={triggerBounce}
+							class="user-avatar-btn focus:ring-maroon-500 flex max-w-xs items-center rounded-full text-sm
+					   transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-offset-2 focus:outline-none
+					   {isUserBouncing ? 'animate-bounce-cartoon' : ''}"
+							title="Hello, {$auth.user?.username || 'User'}!"
 						>
-							<img
-								class="h-8 w-8 rounded-full"
-								src="https://ui-avatars.com/api/?name={$auth.user?.username ||
-									'User'}&background=800020&color=fff"
-								alt="User avatar"
-							/>
+							<div
+								class="user-initial-avatar flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white shadow-lg"
+							>
+								{getUserInitial($auth.user?.username)}
+							</div>
 						</button>
 
+						<!-- Welcome Text -->
+						<div class="ml-3 hidden sm:block">
+							<p class="text-sm font-medium text-gray-700">Welcome back,</p>
+							<p class="text-xs text-gray-500">
+								{$auth.user?.username || 'User'} | {$auth.user?.role || 'Visit'}
+							</p>
+						</div>
+
+						<!-- Logout Button -->
 						<button
 							on:click={handleLogout}
+							disabled={$auth.isLoggingOut}
 							class="bg-maroon-600 hover:bg-maroon-700 focus:ring-maroon-500/20 ml-3 rounded-lg border border-transparent px-4 py-2 text-sm font-medium
-								   text-white transition-all duration-200 hover:scale-105 hover:shadow-lg
-								   focus:ring-2 focus:outline-none active:scale-95"
+		   text-white transition-all duration-200 hover:scale-105 hover:shadow-lg
+		   focus:ring-2 focus:outline-none active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
 						>
-							Logout
+							{#if $auth.isLoggingOut}
+								<svg
+									class="mr-2 -ml-1 h-4 w-4 animate-spin text-white"
+									xmlns="http://www.w3.org/2000/svg"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+								Logging out...
+							{:else}
+								Logout
+							{/if}
 						</button>
 					{/if}
 				</div>
@@ -435,6 +674,8 @@
 		</main>
 	</div>
 </div>
+
+<SearchOverlay />
 
 <style>
 	/* Enhanced Maroon Color Palette */
@@ -480,5 +721,99 @@
 	:global(*) {
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
+	}
+
+	/* 🆕 Gradient Maroon to Gold yang Elegan */
+	:global(.user-initial-avatar) {
+		background: linear-gradient(
+			135deg,
+			#800020 0%,
+			#a0002a 25%,
+			#c41e3a 50%,
+			#e6b800 75%,
+			#ffd700 100%
+		);
+		box-shadow:
+			0 4px 8px rgba(128, 0, 32, 0.3),
+			0 2px 4px rgba(255, 215, 0, 0.2),
+			inset 0 1px 0 rgba(255, 255, 255, 0.1);
+		position: relative;
+		overflow: hidden;
+	}
+
+	/* 🆕 Efek Shimmer untuk Gold Touch */
+	:global(.user-initial-avatar::before) {
+		content: '';
+		position: absolute;
+		top: -50%;
+		left: -50%;
+		width: 200%;
+		height: 200%;
+		background: linear-gradient(45deg, transparent, rgba(255, 215, 0, 0.1), transparent);
+		animation: shimmer 3s infinite;
+		pointer-events: none;
+	}
+
+	/* 🆕 Bounce Kartun Animation */
+	@keyframes bounce-cartoon {
+		0% {
+			transform: translateY(0) scale(1);
+		}
+		20% {
+			transform: translateY(-8px) scale(1.05);
+		}
+		40% {
+			transform: translateY(-4px) scale(1.02);
+		}
+		60% {
+			transform: translateY(-6px) scale(1.03);
+		}
+		80% {
+			transform: translateY(-2px) scale(1.01);
+		}
+		100% {
+			transform: translateY(0) scale(1);
+		}
+	}
+
+	/* 🆕 Shimmer Animation */
+	@keyframes shimmer {
+		0% {
+			transform: translateX(-100%) translateY(-100%) rotate(45deg);
+		}
+		100% {
+			transform: translateX(100%) translateY(100%) rotate(45deg);
+		}
+	}
+
+	/* 🆕 Hover Bounce Effect */
+	:global(.user-avatar-btn:hover .user-initial-avatar) {
+		animation: bounce-cartoon 0.6s ease-in-out;
+		transform: scale(1.1);
+	}
+
+	/* 🆕 Custom Bounce Animation Class */
+	:global(.animate-bounce-cartoon) {
+		animation: bounce-cartoon 0.6s ease-in-out;
+	}
+
+	/* 🆕 Enhanced Maroon Colors */
+	:global(.bg-maroon-600) {
+		background-color: #800020;
+	}
+	:global(.hover\:bg-maroon-700:hover) {
+		background-color: #600018;
+	}
+	:global(.focus\:ring-maroon-500:focus) {
+		--tw-ring-color: rgba(128, 0, 32, 0.2);
+	}
+
+	/* 🆕 Responsive Improvements */
+	@media (max-width: 640px) {
+		:global(.user-initial-avatar) {
+			width: 36px;
+			height: 36px;
+			font-size: 0.75rem;
+		}
 	}
 </style>

@@ -39,7 +39,14 @@ async function apiCall(endpoint, options = {}) {
 			throw new Error(errorData.message || `HTTP Error: ${response.status}`);
 		}
 
-		return await response.json();
+		const payload = await response.json();
+		// Backend selalu membungkus response sukses sebagai { success, message, data }.
+		// Unwrap di sini supaya store customers.js menerima array/object langsung,
+		// bukan envelope-nya (sebelumnya customers store jadi berisi objek envelope,
+		// bukan array, sehingga .slice()/.map() di halaman Pelanggan & filter Transaksi error).
+		return payload && Object.prototype.hasOwnProperty.call(payload, 'data')
+			? payload.data
+			: payload;
 	} catch (error) {
 		console.error('API Call Error:', error);
 		throw error;
