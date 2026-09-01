@@ -16,7 +16,7 @@
 		if (saved) {
 			try {
 				sortState.set(JSON.parse(saved));
-			} catch (e) {
+			} catch {
 				console.warn('Failed to parse saved sort state');
 			}
 		}

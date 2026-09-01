@@ -207,7 +207,7 @@
 							{incomeSummary?.income_today > incomeSummary?.income_yesterday ? '↑' : '↓'}
 							{Math.abs(
 								(((incomeSummary?.income_today || 0) - (incomeSummary?.income_yesterday || 0)) /
-									(incomeSummary?.income_yesterday || 1 || 1)) *
+									(incomeSummary?.income_yesterday || 1)) *
 									100
 							).toFixed(1)}%
 						</span>

@@ -123,7 +123,7 @@
 								class:border-red-300={errors.title}
 							>
 								<option value="">Pilih Gelar</option>
-								{#each titleOptions as title}
+								{#each titleOptions as title (title)}
 									<option value={title}>{title}</option>
 								{/each}
 							</select>
@@ -215,7 +215,7 @@
 								class:border-red-300={errors.customer_type_id}
 							>
 								<option value="">Pilih Tipe</option>
-								{#each customerTypeOptions as type}
+								{#each customerTypeOptions as type (type.id)}
 									<option value={type.id}>{type.name}</option>
 								{/each}
 							</select>
@@ -236,7 +236,7 @@
 								class:border-red-300={errors.gallon_price_id}
 							>
 								<option value="">Pilih Harga</option>
-								{#each gallonPriceOptions as price}
+								{#each gallonPriceOptions as price (price.id)}
 									<option value={price.id}>{price.name}</option>
 								{/each}
 							</select>
