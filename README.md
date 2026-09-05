@@ -71,7 +71,7 @@ src/
 
 **Store pattern**: each `src/lib/stores/*.js` exports plain `writable`/`derived` stores plus an `xxxActions` object of async functions that call `api.js` and update the stores (with toast feedback on success/error). Pages import stores + the actions object; components stay presentational and communicate up via `dispatch`.
 
-**Server-side pagination**: `transactions.js`, `auditLogs.js`, and `payments.js` stores hold *accumulated pages* (not the full dataset) with a `loadPage({ reset })` action — `reset: true` on filter/search change, `reset: false` from the `infiniteScroll` action's `onLoadMore` as the user scrolls. Other lists (Pelanggan, Galon, Armada) still load everything up front and paginate client-side — their size is bounded by customer count, which grows slowly enough not to need it.
+**Server-side pagination**: `transactions.js`, `auditLogs.js`, and `payments.js` stores hold _accumulated pages_ (not the full dataset) with a `loadPage({ reset })` action — `reset: true` on filter/search change, `reset: false` from the `infiniteScroll` action's `onLoadMore` as the user scrolls. Other lists (Pelanggan, Galon, Armada) still load everything up front and paginate client-side — their size is bounded by customer count, which grows slowly enough not to need it.
 
 ## Building & Deployment
 
@@ -79,12 +79,12 @@ Production build uses `@sveltejs/adapter-node`, producing a standalone Node serv
 
 Deployed alongside the backend on one VPS, managed by PM2, behind nginx:
 
-| | Production | Staging |
-|---|---|---|
-| Branch | `main` | `develop` |
-| Port (internal) | 3000 | 3001 |
-| Public URL | `:80` via nginx | `:8080` via nginx |
-| PM2 process | `cv-anugrah-frontend` | `cv-anugrah-frontend-staging` |
+|                 | Production            | Staging                       |
+| --------------- | --------------------- | ----------------------------- |
+| Branch          | `main`                | `develop`                     |
+| Port (internal) | 3000                  | 3001                          |
+| Public URL      | `:80` via nginx       | `:8080` via nginx             |
+| PM2 process     | `cv-anugrah-frontend` | `cv-anugrah-frontend-staging` |
 
 ### CI/CD
 
