@@ -11,8 +11,22 @@
 	// Event dispatcher
 	const dispatch = createEventDispatcher();
 
+	// API bisa balikin date_of_birth/subscription_date sbg ISO datetime penuh
+	// ("1996-10-20T00:00:00.000Z") - <input type="date"> cuma nerima "yyyy-MM-dd",
+	// kalau gak dipotong browser diam2 nolak nampilin nilainya (field keliatan kosong).
+	function toDateInputValue(value) {
+		if (!value) return value;
+		return String(value).slice(0, 10);
+	}
+
 	// Form state
-	let formData = customer ? { ...customer } : { ...defaultCustomer };
+	let formData = customer
+		? {
+				...customer,
+				date_of_birth: toDateInputValue(customer.date_of_birth),
+				subscription_date: toDateInputValue(customer.subscription_date)
+			}
+		: { ...defaultCustomer };
 	let errors = {};
 	let isSubmitting = false;
 	let isEdit = !!customer;
