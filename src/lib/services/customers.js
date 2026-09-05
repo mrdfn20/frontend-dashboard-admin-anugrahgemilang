@@ -111,6 +111,24 @@ export const customerService = {
 		return await apiCall(`/customers/${id}`, {
 			method: 'DELETE'
 		});
+	},
+
+	/**
+	 * Restore pelanggan yang sudah dihapus (soft delete)
+	 * @param {number} id - Customer ID
+	 */
+	async restoreCustomer(id) {
+		return await apiCall(`/customers/restore/${id}`, {
+			method: 'PUT'
+		});
+	},
+
+	/**
+	 * Ringkasan pelanggan aktif transaksi bulan ini
+	 * @returns {Promise<{activeCustomerIds: number[]}>}
+	 */
+	async getActivitySummary() {
+		return await apiCall('/customers/activity-summary');
 	}
 };
 

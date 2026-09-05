@@ -8,12 +8,54 @@
 		filteredCustomers,
 		filteredCustomersCount,
 		searchTerm,
+		customerTypeFilter,
+		gallonPriceFilter,
+		debtFilter,
+		activityFilter,
+		activeCustomerIds,
 		isLoading,
 		error
 	} from '$lib/stores/customers.js';
+	import { getCustomerTypeLabel } from '$lib/models/customer.js';
 	import CustomerForm from '$lib/components/customers/CustomerForm.svelte';
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
 	import { infiniteScroll } from '$lib/actions/infiniteScroll.js';
+
+	const customerTypeOptions = [
+		{ id: 1, name: 'Pelanggan Akhir (Rumah)' },
+		{ id: 2, name: 'Warung/Distributor' },
+		{ id: 3, name: 'Pabrik' }
+	];
+	const gallonPriceOptions = [
+		{ id: 'gw0', name: 'Rp 0' },
+		{ id: 'gw5', name: 'Rp 5.000' },
+		{ id: 'gw6', name: 'Rp 6.000' },
+		{ id: 'gw7', name: 'Rp 7.000' },
+		{ id: 'gw7.5', name: 'Rp 7.500' },
+		{ id: 'gw8', name: 'Rp 8.000' },
+		{ id: 'gw9', name: 'Rp 9.000' },
+		{ id: 'gw10', name: 'Rp 10.000' },
+		{ id: 'gw11', name: 'Rp 11.000' },
+		{ id: 'gw12', name: 'Rp 12.000' }
+	];
+
+	// 🆕 Jumlah aktif/tidak aktif buat 2 kartu statistik
+	$: activeCount = $activeCustomerIds
+		? $customers.filter((c) => $activeCustomerIds.includes(c.id)).length
+		: null;
+	$: inactiveCount = $activeCustomerIds ? $customers.length - activeCount : null;
+
+	function toggleActivityFilter(value) {
+		activityFilter.set($activityFilter === value ? '' : value);
+	}
+
+	function formatCurrency(amount) {
+		return new Intl.NumberFormat('id-ID', {
+			style: 'currency',
+			currency: 'IDR',
+			minimumFractionDigits: 0
+		}).format(amount || 0);
+	}
 
 	// State management
 	let showAddForm = false;
@@ -27,7 +69,7 @@
 
 	// Load customers on mount
 	onMount(async () => {
-		await customerActions.loadCustomers();
+		await Promise.all([customerActions.loadCustomers(), customerActions.loadActivitySummary()]);
 	});
 
 	// 🆕 Infinite scroll: reveal bertahap dari filteredCustomers yang sudah full di-load
@@ -136,87 +178,168 @@
 				<h1 class="text-2xl font-semibold text-gray-900">Manajemen Pelanggan</h1>
 				<p class="text-gray-500">Kelola data pelanggan CV Anugrah Gemilang</p>
 			</div>
-			<button
-				on:click={handleAddCustomer}
-				class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					class="mr-2 inline h-4 w-4"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
+			<div class="flex gap-2">
+				<button
+					on:click={() => goto('/dashboard/customers/deleted')}
+					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 4v16m8-8H4"
-					/>
-				</svg>
-				Tambah Pelanggan
-			</button>
+					Pelanggan Terhapus
+				</button>
+				<button
+					on:click={handleAddCustomer}
+					class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="mr-2 inline h-4 w-4"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 4v16m8-8H4"
+						/>
+					</svg>
+					Tambah Pelanggan
+				</button>
+			</div>
 		</div>
 	</div>
 
-	<!-- Search & Stats -->
-	<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-		<!-- Search -->
-		<div class="md:col-span-2">
-			<div class="relative">
-				<input
-					type="text"
-					placeholder="Cari pelanggan berdasarkan apapun... (gunakan /123 untuk cari ID spesifik)"
-					bind:value={$searchTerm}
-					class="focus:border-maroon-500 focus:ring-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 pl-10 text-sm"
+	<!-- Search -->
+	<div class="mb-4">
+		<div class="relative">
+			<input
+				type="text"
+				placeholder="Cari pelanggan berdasarkan apapun... (gunakan /123 untuk cari ID spesifik)"
+				bind:value={$searchTerm}
+				class="focus:border-maroon-500 focus:ring-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 pl-10 text-sm"
+			/>
+			<svg
+				class="absolute top-2.5 left-3 h-4 w-4 text-gray-400"
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 				/>
-				<svg
-					class="absolute top-2.5 left-3 h-4 w-4 text-gray-400"
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
+			</svg>
+
+			<!-- 🆕 Clear search button -->
+			{#if $searchTerm}
+				<button
+					on:click={() => customerActions.clearSearch()}
+					class="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
+					title="Clear search"
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-					/>
-				</svg>
-
-				<!-- 🆕 Clear search button -->
-				{#if $searchTerm}
-					<button
-						on:click={() => customerActions.clearSearch()}
-						class="absolute top-2.5 right-3 text-gray-400 hover:text-gray-600"
-						title="Clear search"
-					>
-						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/>
-						</svg>
-					</button>
-				{/if}
-			</div>
+					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/>
+					</svg>
+				</button>
+			{/if}
 		</div>
+	</div>
 
-		<!-- Stats -->
+	<!-- Stats Cards -->
+	<div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
 		<div class="bg-maroon-50 rounded-lg p-4">
 			<div class="text-center">
 				<p class="text-maroon-600 text-2xl font-bold">{$filteredCustomersCount}</p>
 				<p class="text-maroon-600 text-sm">
-					{$searchTerm ? 'Hasil Pencarian' : 'Total Pelanggan'}
+					{$searchTerm ||
+					$customerTypeFilter ||
+					$gallonPriceFilter ||
+					$debtFilter ||
+					$activityFilter
+						? 'Hasil Filter'
+						: 'Total Pelanggan'}
 				</p>
-				{#if $searchTerm && $filteredCustomersCount !== $customers.length}
+				{#if $filteredCustomersCount !== $customers.length}
 					<p class="text-maroon-400 mt-1 text-xs">dari {$customers.length} total</p>
 				{/if}
 			</div>
 		</div>
+
+		<!-- 🆕 Kartu Aktif Bulan Ini - klik buat filter list ke pelanggan yg aktif -->
+		<button
+			on:click={() => toggleActivityFilter('active')}
+			class="rounded-lg border-2 p-4 text-center transition-colors {$activityFilter === 'active'
+				? 'border-green-500 bg-green-50'
+				: 'border-transparent bg-green-50/40'}"
+		>
+			<p class="text-2xl font-bold text-green-600">{activeCount ?? '...'}</p>
+			<p class="text-sm text-green-700">Aktif Transaksi Bulan Ini</p>
+		</button>
+
+		<!-- 🆕 Kartu Tidak Aktif Bulan Ini -->
+		<button
+			on:click={() => toggleActivityFilter('inactive')}
+			class="rounded-lg border-2 p-4 text-center transition-colors {$activityFilter === 'inactive'
+				? 'border-gray-400 bg-gray-100'
+				: 'border-transparent bg-gray-50'}"
+		>
+			<p class="text-2xl font-bold text-gray-600">{inactiveCount ?? '...'}</p>
+			<p class="text-sm text-gray-600">Tidak Aktif Bulan Ini</p>
+		</button>
+	</div>
+
+	<!-- 🆕 Filter -->
+	<div class="mb-6 flex flex-wrap gap-3">
+		<select
+			bind:value={$customerTypeFilter}
+			class="focus:border-maroon-500 focus:ring-maroon-500 rounded-md border border-gray-300 px-3 py-2 text-sm"
+		>
+			<option value="">Semua Tipe Pelanggan</option>
+			{#each customerTypeOptions as opt (opt.id)}
+				<option value={opt.id}>{opt.name}</option>
+			{/each}
+		</select>
+
+		<select
+			bind:value={$gallonPriceFilter}
+			class="focus:border-maroon-500 focus:ring-maroon-500 rounded-md border border-gray-300 px-3 py-2 text-sm"
+		>
+			<option value="">Semua Harga Galon</option>
+			{#each gallonPriceOptions as opt (opt.id)}
+				<option value={opt.id}>{opt.name}</option>
+			{/each}
+		</select>
+
+		<select
+			bind:value={$debtFilter}
+			class="focus:border-maroon-500 focus:ring-maroon-500 rounded-md border border-gray-300 px-3 py-2 text-sm"
+		>
+			<option value="">Semua Status Hutang</option>
+			<option value="has_debt">Ada Hutang</option>
+			<option value="no_debt">Lunas / Gak Ada Hutang</option>
+		</select>
+
+		{#if $customerTypeFilter || $gallonPriceFilter || $debtFilter || $activityFilter}
+			<button
+				on:click={() => {
+					customerTypeFilter.set('');
+					gallonPriceFilter.set('');
+					debtFilter.set('');
+					activityFilter.set('');
+				}}
+				class="text-sm text-gray-500 underline hover:text-gray-700"
+			>
+				Reset filter
+			</button>
+		{/if}
 	</div>
 
 	{#if $searchTerm.startsWith('/') && $filteredCustomersCount === 1}
@@ -289,6 +412,21 @@
 								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							>
 								Gallon Price
+							</th>
+							<th
+								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							>
+								Tipe
+							</th>
+							<th
+								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							>
+								Stok Galon
+							</th>
+							<th
+								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							>
+								Saldo
 							</th>
 							<th
 								class="px-6 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
@@ -371,6 +509,30 @@
 									<div class="text-sm font-medium text-gray-900">
 										{formatGallonPrice(customer.price)}
 									</div>
+								</td>
+
+								<!-- 🆕 Tipe Pelanggan Column -->
+								<td class="px-6 py-4 whitespace-nowrap">
+									<div class="text-sm text-gray-700">
+										{getCustomerTypeLabel(customer.customer_type_id)}
+									</div>
+								</td>
+
+								<!-- 🆕 Stok Galon Column -->
+								<td class="px-6 py-4 text-center whitespace-nowrap">
+									<div class="text-sm text-gray-900">{customer.customer_gallon_stock ?? 0}</div>
+								</td>
+
+								<!-- 🆕 Saldo Column -->
+								<td class="px-6 py-4 whitespace-nowrap">
+									<div class="text-sm font-medium text-gray-900">
+										{formatCurrency(customer.balance)}
+									</div>
+									{#if Number(customer.total_debt) > 0}
+										<div class="text-xs text-red-600">
+											Hutang {formatCurrency(customer.total_debt)}
+										</div>
+									{/if}
 								</td>
 
 								<!-- Aksi Column -->

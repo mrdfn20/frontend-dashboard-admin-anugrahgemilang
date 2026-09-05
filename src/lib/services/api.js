@@ -234,7 +234,10 @@ const api = {
 		getById: (id) => api.get(`/customers/${id}`),
 		create: (data) => api.post('/customers', data),
 		update: (id, data) => api.put(`/customers/${id}`, data),
-		delete: (id) => api.delete(`/customers/${id}`)
+		delete: (id) => api.delete(`/customers/${id}`),
+		restore: (id) => api.put(`/customers/restore/${id}`),
+		getDeleted: () => api.get('/customers/deleted'),
+		getActivitySummary: () => api.get('/customers/activity-summary')
 	},
 
 	// Transaction endpoints

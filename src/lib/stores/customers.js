@@ -18,35 +18,83 @@ export const error = writable(null);
 // 🆕 Search functionality stores
 export const searchTerm = writable('');
 
-// 🆕 Filtered customers based on search term
-export const filteredCustomers = derived([customers, searchTerm], ([$customers, $searchTerm]) => {
-	// Jika search term kosong, return semua customers
-	if (!$searchTerm.trim()) {
-		return $customers;
-	}
+// 🆕 Filter stores - kosong string = "semua" (gak difilter)
+export const customerTypeFilter = writable('');
+export const gallonPriceFilter = writable('');
+export const debtFilter = writable(''); // '', 'has_debt', 'no_debt'
+export const activityFilter = writable(''); // '', 'active', 'inactive'
 
-	// 🆕 Check if search term is ID format (/123)
-	const idMatch = $searchTerm.match(/^\/(\d+)$/);
-	if (idMatch) {
-		const searchId = parseInt(idMatch[1]);
-		return $customers.filter((customer) => customer.id === searchId);
-	}
+// 🆕 customer_id yang punya transaksi bulan ini - dimuat terpisah, dipakai
+// activityFilter buat mastiin pelanggan mana yg "aktif"/"tidak aktif"
+export const activeCustomerIds = writable(null); // null = belum dimuat
 
-	// Filter customers berdasarkan multiple fields (existing logic)
-	return $customers.filter(
-		(customer) =>
-			// Customer name
-			(customer.customer_name || '').toLowerCase().includes($searchTerm.toLowerCase()) ||
-			// Customer ID (string match for partial)
-			customer.id.toString().includes($searchTerm) ||
-			// WhatsApp number
-			(customer.whatsapp_number && customer.whatsapp_number.includes($searchTerm)) ||
-			// Address
-			(customer.address || '').toLowerCase().includes($searchTerm.toLowerCase()) ||
-			// Sub region name
-			(customer.sub_region_name || '').toLowerCase().includes($searchTerm.toLowerCase())
-	);
-});
+// 🆕 Filtered customers - gabungan search term + semua filter di atas
+export const filteredCustomers = derived(
+	[
+		customers,
+		searchTerm,
+		customerTypeFilter,
+		gallonPriceFilter,
+		debtFilter,
+		activityFilter,
+		activeCustomerIds
+	],
+	([
+		$customers,
+		$searchTerm,
+		$customerTypeFilter,
+		$gallonPriceFilter,
+		$debtFilter,
+		$activityFilter,
+		$activeCustomerIds
+	]) => {
+		let result = $customers;
+
+		const term = $searchTerm.trim();
+		if (term) {
+			// 🆕 Check if search term is ID format (/123)
+			const idMatch = term.match(/^\/(\d+)$/);
+			if (idMatch) {
+				const searchId = parseInt(idMatch[1]);
+				result = result.filter((customer) => customer.id === searchId);
+			} else {
+				result = result.filter(
+					(customer) =>
+						(customer.customer_name || '').toLowerCase().includes(term.toLowerCase()) ||
+						customer.id.toString().includes(term) ||
+						(customer.whatsapp_number && customer.whatsapp_number.includes(term)) ||
+						(customer.address || '').toLowerCase().includes(term.toLowerCase()) ||
+						(customer.sub_region_name || '').toLowerCase().includes(term.toLowerCase())
+				);
+			}
+		}
+
+		if ($customerTypeFilter) {
+			result = result.filter(
+				(customer) => String(customer.customer_type_id) === String($customerTypeFilter)
+			);
+		}
+
+		if ($gallonPriceFilter) {
+			result = result.filter((customer) => customer.gallon_price_id === $gallonPriceFilter);
+		}
+
+		if ($debtFilter === 'has_debt') {
+			result = result.filter((customer) => Number(customer.total_debt) > 0);
+		} else if ($debtFilter === 'no_debt') {
+			result = result.filter((customer) => Number(customer.total_debt) <= 0);
+		}
+
+		if ($activityFilter && $activeCustomerIds) {
+			const activeSet = new Set($activeCustomerIds);
+			result = result.filter((customer) =>
+				$activityFilter === 'active' ? activeSet.has(customer.id) : !activeSet.has(customer.id)
+			);
+		}
+
+		return result;
+	}
+);
 
 // Derived stores for computed values
 export const customersCount = derived(customers, ($customers) => $customers.length);
@@ -170,7 +218,8 @@ export const customerActions = {
 	},
 
 	/**
-	 * Delete customer
+	 * Delete customer (soft delete di backend - bisa di-restore lewat
+	 * halaman "Pelanggan Terhapus", lihat restoreCustomer()).
 	 * @param {number} id - Customer ID
 	 */
 	async deleteCustomer(id) {
@@ -186,7 +235,9 @@ export const customerActions = {
 			// Clear selected customer if it's the deleted one
 			selectedCustomer.update((current) => (current && current.id === id ? null : current));
 
-			toast.success('Customer berhasil dihapus!');
+			toast.success('Pelanggan dihapus. Salah hapus? Buka "Pelanggan Terhapus" buat kembalikan.', {
+				duration: 6000
+			});
 			return true;
 		} catch (err) {
 			toast.error(err.message || 'Gagal menghapus customer');
@@ -194,6 +245,38 @@ export const customerActions = {
 			throw err;
 		} finally {
 			isLoading.set(false);
+		}
+	},
+
+	/**
+	 * Restore pelanggan yang baru dihapus (undo) - reload full list biar
+	 * urutan & data ikut konsisten lagi, bukan cuma nge-push balik ke array lokal.
+	 * @param {number} id - Customer ID
+	 */
+	async restoreCustomer(id) {
+		try {
+			await customerService.restoreCustomer(id);
+			toast.success('Pelanggan berhasil dikembalikan.');
+			await customerActions.loadCustomers();
+			return true;
+		} catch (err) {
+			toast.error(err.message || 'Gagal mengembalikan pelanggan');
+			console.error('Failed to restore customer:', err);
+			throw err;
+		}
+	},
+
+	/**
+	 * Muat daftar customer_id yang punya transaksi bulan ini - dipakai kartu
+	 * "Aktif/Tidak Aktif Bulan Ini" & activityFilter.
+	 */
+	async loadActivitySummary() {
+		try {
+			const result = await customerService.getActivitySummary();
+			activeCustomerIds.set(result?.activeCustomerIds || []);
+		} catch (err) {
+			console.error('Failed to load activity summary:', err);
+			activeCustomerIds.set([]);
 		}
 	},
 
