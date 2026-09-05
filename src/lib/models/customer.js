@@ -120,10 +120,26 @@ export function formatCustomerForDisplay(customer) {
  * @returns {Object} Cleaned customer data
  */
 export function cleanCustomerData(customer) {
-	const cleaned = { ...customer };
-
-	// Remove id field for create operation
-	delete cleaned.id;
+	// Whitelist cuma field yang beneran dikenal skema backend - `customer` disini
+	// sering datang dari hasil GET (via selectedCustomer) yang ikut bawa kolom hasil
+	// JOIN buat tampilan doang (price, sub_region_name, region_name). Kalau field2
+	// itu ikut disemprot balik ke API, Joi nolak sebagai "not allowed" -> 400 "Data
+	// tidak valid" setiap kali edit customer yang datanya diambil dari API.
+	const cleaned = {
+		title: customer.title,
+		customer_name: customer.customer_name,
+		date_of_birth: customer.date_of_birth,
+		address: customer.address,
+		whatsapp_number: customer.whatsapp_number,
+		customer_gallon_stock: customer.customer_gallon_stock,
+		gallon_price_id: customer.gallon_price_id,
+		subscription_date: customer.subscription_date,
+		customer_photo: customer.customer_photo,
+		sub_region_id: customer.sub_region_id,
+		customer_type_id: customer.customer_type_id,
+		latitude: customer.latitude,
+		longitude: customer.longitude
+	};
 
 	// Remove empty strings and convert to null
 	Object.keys(cleaned).forEach((key) => {

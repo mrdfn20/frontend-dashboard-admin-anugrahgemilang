@@ -18,7 +18,7 @@
 	let isEdit = !!customer;
 
 	// Form options (these would typically come from API or store)
-	const titleOptions = ['Tn.', 'Ny.'];
+	const titleOptions = ['BAPAK', 'IBU'];
 	const customerTypeOptions = [
 		{ id: 1, name: 'Pelanggan Akhir (Rumah)' },
 		{ id: 2, name: 'Warung/Distributor' },
