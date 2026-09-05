@@ -271,7 +271,9 @@ const api = {
 		getById: (customerId) => api.get(`/customerbalance/${customerId}`),
 		add: (data) => api.post('/customerbalance', data),
 		// data: { customer_id, balance } - balance = jumlah yang DITAMBAHKAN (increment), bukan nilai akhir
-		update: (data) => api.put('/customerbalance', data)
+		update: (data) => api.put('/customerbalance', data),
+		// data: { customer_id, balance } - balance = NILAI AKHIR (menimpa, bukan menambah). Admin only.
+		set: (data) => api.put('/customerbalance/set', data)
 	},
 
 	// Gallon stock endpoints

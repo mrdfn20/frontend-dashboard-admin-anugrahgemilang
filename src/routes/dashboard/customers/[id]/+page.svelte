@@ -6,9 +6,11 @@
 	import { goto } from '$app/navigation';
 	import { customerActions, selectedCustomer, isLoading, error } from '$lib/stores/customers.js';
 	import { api } from '$lib/services/api.js';
+	import { auth } from '$lib/stores/auth';
 	import CustomerForm from '$lib/components/customers/CustomerForm.svelte';
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
 	import AddBalanceModal from '$lib/components/customers/AddBalanceModal.svelte';
+	import EditBalanceModal from '$lib/components/customers/EditBalanceModal.svelte';
 
 	// Get customer ID from URL params
 	$: customerId = $page.params.id;
@@ -18,6 +20,7 @@
 	let showDeleteModal = false;
 	let showImageModal = false;
 	let showAddBalanceModal = false;
+	let showEditBalanceModal = false;
 	let selectedImage = null;
 
 	// Saldo & Galon (dimuat terpisah dari data profil, tidak lewat store customers)
@@ -61,6 +64,11 @@
 
 	function handleAddBalanceSuccess() {
 		showAddBalanceModal = false;
+		loadBalance();
+	}
+
+	function handleEditBalanceSuccess() {
+		showEditBalanceModal = false;
 		loadBalance();
 	}
 
@@ -464,12 +472,22 @@
 			<div class="rounded-lg bg-white shadow">
 				<div class="flex items-center justify-between px-6 py-4">
 					<h3 class="text-lg font-medium text-gray-900">Saldo Pelanggan</h3>
-					<button
-						on:click={() => (showAddBalanceModal = true)}
-						class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-3 py-1.5 text-sm font-medium text-white"
-					>
-						+ Tambah Saldo
-					</button>
+					<div class="flex gap-2">
+						{#if $auth.user?.role === 'Admin'}
+							<button
+								on:click={() => (showEditBalanceModal = true)}
+								class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+							>
+								Koreksi Saldo
+							</button>
+						{/if}
+						<button
+							on:click={() => (showAddBalanceModal = true)}
+							class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-3 py-1.5 text-sm font-medium text-white"
+						>
+							+ Tambah Saldo
+						</button>
+					</div>
 				</div>
 				<div class="border-t border-gray-200 px-6 py-4">
 					{#if isLoadingExtras}
@@ -636,6 +654,16 @@
 		currentBalance={customerBalance}
 		on:success={handleAddBalanceSuccess}
 		on:cancel={() => (showAddBalanceModal = false)}
+	/>
+{/if}
+
+{#if showEditBalanceModal && $selectedCustomer}
+	<EditBalanceModal
+		customerId={parseInt(customerId)}
+		customerName={$selectedCustomer.customer_name}
+		currentBalance={customerBalance}
+		on:success={handleEditBalanceSuccess}
+		on:cancel={() => (showEditBalanceModal = false)}
 	/>
 {/if}
 
