@@ -13,13 +13,38 @@
 		debtFilter,
 		activityFilter,
 		activeCustomerIds,
+		regionFilter,
+		subRegionFilter,
 		isLoading,
 		error
 	} from '$lib/stores/customers.js';
 	import { getCustomerTypeLabel } from '$lib/models/customer.js';
+	import { api } from '$lib/services/api.js';
 	import CustomerForm from '$lib/components/customers/CustomerForm.svelte';
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
 	import { infiniteScroll } from '$lib/actions/infiniteScroll.js';
+
+	let regionOptions = [];
+	let subRegionOptions = [];
+
+	// 🆕 Sub-region dropdown ikut nyempit ke region yg lagi dipilih (kalau ada) -
+	// biar gak nyodorin ratusan sub-region dari kecamatan lain yg gak relevan.
+	$: visibleSubRegionOptions = $regionFilter
+		? subRegionOptions.filter((sr) => sr.region_name === $regionFilter)
+		: subRegionOptions;
+
+	async function loadRegionOptions() {
+		try {
+			const [regions, subRegions] = await Promise.all([
+				api.regions.getAll(),
+				api.regions.getSubRegions()
+			]);
+			regionOptions = regions || [];
+			subRegionOptions = subRegions || [];
+		} catch (err) {
+			console.error('Failed to load region options:', err);
+		}
+	}
 
 	const customerTypeOptions = [
 		{ id: 1, name: 'Pelanggan Akhir (Rumah)' },
@@ -69,8 +94,27 @@
 
 	// Load customers on mount
 	onMount(async () => {
-		await Promise.all([customerActions.loadCustomers(), customerActions.loadActivitySummary()]);
+		await Promise.all([
+			customerActions.loadCustomers(),
+			customerActions.loadActivitySummary(),
+			loadRegionOptions()
+		]);
 	});
+
+	// 🆕 Kalau region diganti dan sub-region yg lagi dipilih bukan bagian dari
+	// region baru itu, reset sub-region filter biar gak nyisain kombinasi aneh
+	let previousRegionFilter = '';
+	$: {
+		if ($regionFilter !== previousRegionFilter) {
+			previousRegionFilter = $regionFilter;
+			if (
+				$subRegionFilter &&
+				!visibleSubRegionOptions.some((sr) => sr.id === Number($subRegionFilter))
+			) {
+				subRegionFilter.set('');
+			}
+		}
+	}
 
 	// 🆕 Infinite scroll: reveal bertahap dari filteredCustomers yang sudah full di-load
 	$: visibleCustomers = $filteredCustomers.slice(0, visibleCount);
@@ -263,7 +307,9 @@
 					$customerTypeFilter ||
 					$gallonPriceFilter ||
 					$debtFilter ||
-					$activityFilter
+					$activityFilter ||
+					$regionFilter ||
+					$subRegionFilter
 						? 'Hasil Filter'
 						: 'Total Pelanggan'}
 				</p>
@@ -327,13 +373,35 @@
 			<option value="no_debt">Lunas / Gak Ada Hutang</option>
 		</select>
 
-		{#if $customerTypeFilter || $gallonPriceFilter || $debtFilter || $activityFilter}
+		<select
+			bind:value={$regionFilter}
+			class="focus:border-maroon-500 focus:ring-maroon-500 rounded-md border border-gray-300 px-3 py-2 text-sm"
+		>
+			<option value="">Semua Kecamatan</option>
+			{#each regionOptions as region (region.id)}
+				<option value={region.region_name}>{region.region_name}</option>
+			{/each}
+		</select>
+
+		<select
+			bind:value={$subRegionFilter}
+			class="focus:border-maroon-500 focus:ring-maroon-500 rounded-md border border-gray-300 px-3 py-2 text-sm"
+		>
+			<option value="">Semua Sub-Wilayah</option>
+			{#each visibleSubRegionOptions as sr (sr.id)}
+				<option value={sr.id}>{sr.sub_region_name}</option>
+			{/each}
+		</select>
+
+		{#if $customerTypeFilter || $gallonPriceFilter || $debtFilter || $activityFilter || $regionFilter || $subRegionFilter}
 			<button
 				on:click={() => {
 					customerTypeFilter.set('');
 					gallonPriceFilter.set('');
 					debtFilter.set('');
 					activityFilter.set('');
+					regionFilter.set('');
+					subRegionFilter.set('');
 				}}
 				class="text-sm text-gray-500 underline hover:text-gray-700"
 			>

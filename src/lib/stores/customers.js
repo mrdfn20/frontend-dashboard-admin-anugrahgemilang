@@ -23,6 +23,8 @@ export const customerTypeFilter = writable('');
 export const gallonPriceFilter = writable('');
 export const debtFilter = writable(''); // '', 'has_debt', 'no_debt'
 export const activityFilter = writable(''); // '', 'active', 'inactive'
+export const regionFilter = writable(''); // region_name
+export const subRegionFilter = writable(''); // sub_region_id (string dari <select>)
 
 // 🆕 customer_id yang punya transaksi bulan ini - dimuat terpisah, dipakai
 // activityFilter buat mastiin pelanggan mana yg "aktif"/"tidak aktif"
@@ -37,7 +39,9 @@ export const filteredCustomers = derived(
 		gallonPriceFilter,
 		debtFilter,
 		activityFilter,
-		activeCustomerIds
+		activeCustomerIds,
+		regionFilter,
+		subRegionFilter
 	],
 	([
 		$customers,
@@ -46,7 +50,9 @@ export const filteredCustomers = derived(
 		$gallonPriceFilter,
 		$debtFilter,
 		$activityFilter,
-		$activeCustomerIds
+		$activeCustomerIds,
+		$regionFilter,
+		$subRegionFilter
 	]) => {
 		let result = $customers;
 
@@ -89,6 +95,16 @@ export const filteredCustomers = derived(
 			const activeSet = new Set($activeCustomerIds);
 			result = result.filter((customer) =>
 				$activityFilter === 'active' ? activeSet.has(customer.id) : !activeSet.has(customer.id)
+			);
+		}
+
+		if ($regionFilter) {
+			result = result.filter((customer) => customer.region_name === $regionFilter);
+		}
+
+		if ($subRegionFilter) {
+			result = result.filter(
+				(customer) => String(customer.sub_region_id) === String($subRegionFilter)
 			);
 		}
 

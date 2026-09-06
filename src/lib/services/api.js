@@ -240,6 +240,12 @@ const api = {
 		getActivitySummary: () => api.get('/customers/activity-summary')
 	},
 
+	// Region & sub-region (read-only, buat dropdown filter/form)
+	regions: {
+		getAll: () => api.get('/regions'),
+		getSubRegions: () => api.get('/regions/sub-regions')
+	},
+
 	// Transaction endpoints
 	transactions: {
 		getAll: () => api.get('/transactions'),
