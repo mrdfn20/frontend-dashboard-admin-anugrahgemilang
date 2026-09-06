@@ -5,12 +5,13 @@ SvelteKit admin dashboard for CV Anugrah Gemilang's water-gallon delivery busine
 ## Features
 
 - 🔐 Login with JWT (access + refresh token, auto-refresh on expiry)
-- 👥 **Pelanggan** — customer CRUD, Google-Drive-hosted photo, search
+- 👥 **Pelanggan** — customer CRUD (soft-delete with a "Pelanggan Terhapus" restore page), Google-Drive-hosted photo, search, filters (customer type, gallon price, debt status, region/sub-region), "active/inactive this month" cards (click to filter the list), balance + outstanding-debt columns, Admin-only balance correction (hard set, distinct from the additive "Tambah Saldo")
 - 💰 **Transaksi** — create Tunai/Hutang transactions via type-ahead customer picker (no more dropdown), live "estimated total" and Tunai/Hutang guidance as you type the paid amount, restore soft-deleted transactions, pay off debts inline
 - 🚰 **Galon** — current unreturned-gallon stock per customer, plus a global movement history tab with running balance
 - 🧾 **Hutang** — cross-customer debt list with status/date/name filters, pay directly from the list
 - 🚚 **Kelola Armada** — fleet CRUD (Admin only)
-- 📊 **Dashboard** & **Laporan** — summary cards + custom date-range report with CSV export
+- 🗺️ **Kelola Wilayah** — region (kecamatan) & sub-region CRUD (Admin only), feeds the Pelanggan filters and the per-region report
+- 📊 **Dashboard** & **Laporan** — summary cards + custom date-range report with CSV export, plus an omzet/hutang breakdown table per region
 - 👤 **User Management** & **Audit Log** (Admin only)
 - 🔍 Global search overlay (`Ctrl+K`)
 - Currency inputs with thousand-separator formatting and select-on-focus; infinite-scroll lists (server-side paginated for Transaksi/Audit Log/Hutang, the datasets that grow without bound)
@@ -59,8 +60,9 @@ src/
 │   └── dashboard/
 │       ├── +layout.svelte                     # sidebar shell, role-gated nav
 │       ├── customers/, transactions/, gallon/, payments/,
-│       │   armada/, reports/, users/, audit-logs/
-│       └── customers/[id]/                     # customer detail
+│       │   armada/, regions/, reports/, users/, audit-logs/
+│       ├── customers/[id]/                     # customer detail
+│       └── customers/deleted/                  # soft-deleted customers, restore UI
 ├── lib/
 │   ├── actions/       # Svelte actions: infiniteScroll, selectOnFocus
 │   ├── components/     # grouped by feature (transactions/, customers/, ui/, ...)
@@ -70,6 +72,8 @@ src/
 ```
 
 **Store pattern**: each `src/lib/stores/*.js` exports plain `writable`/`derived` stores plus an `xxxActions` object of async functions that call `api.js` and update the stores (with toast feedback on success/error). Pages import stores + the actions object; components stay presentational and communicate up via `dispatch`.
+
+**Client-side filtering (Pelanggan)**: `customers.js`'s `filteredCustomers` is one `derived` store combining the search term with every filter (type, gallon price, debt status, month activity, region, sub-region) — each filter is its own independent `writable`, and the region/sub-region dropdowns cascade (picking a region narrows the sub-region options, and resets the sub-region filter if it no longer applies).
 
 **Server-side pagination**: `transactions.js`, `auditLogs.js`, and `payments.js` stores hold _accumulated pages_ (not the full dataset) with a `loadPage({ reset })` action — `reset: true` on filter/search change, `reset: false` from the `infiniteScroll` action's `onLoadMore` as the user scrolls. Other lists (Pelanggan, Galon, Armada) still load everything up front and paginate client-side — their size is bounded by customer count, which grows slowly enough not to need it.
 
