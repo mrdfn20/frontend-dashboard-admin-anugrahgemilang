@@ -26,6 +26,9 @@
 	let showEditBalanceModal = false;
 	let selectedImage = null;
 
+	// 🆕 Tab aktif di layout compact: 'info' | 'transaksi' | 'galon'
+	let activeTab = 'info';
+
 	// Saldo & Galon (dimuat terpisah dari data profil, tidak lewat store customers)
 	let customerBalance = 0;
 	let gallonStock = null;
@@ -37,6 +40,18 @@
 	let isLoadingTransactions = true;
 	let showPayDebtModal = false;
 	let selectedTransaction = null;
+
+	function getRemainingDebt(tx) {
+		return tx.remaining_debt !== undefined && tx.remaining_debt !== null
+			? Number(tx.remaining_debt)
+			: 0;
+	}
+
+	// 🆕 Dipakai buat kartu statistik "Status Hutang" di strip atas
+	$: unpaidTransactions = customerTransactions.filter(
+		(tx) => tx.transaction_type === 'Hutang' && getRemainingDebt(tx) > 0
+	);
+	$: totalRemainingDebt = unpaidTransactions.reduce((sum, tx) => sum + getRemainingDebt(tx), 0);
 
 	async function loadCustomerTransactions() {
 		isLoadingTransactions = true;
@@ -230,63 +245,104 @@
 </svelte:head>
 
 <div class="p-6">
-	<!-- Header -->
-	<div class="mb-6">
-		<div class="flex items-center justify-between">
-			<div class="flex items-center">
+	<!-- Top bar: identitas ringkas + aksi, ganti header 2-baris yang lama -->
+	<div class="mb-4 flex items-center gap-3">
+		<button
+			on:click={goBack}
+			class="flex-shrink-0 rounded-md p-2 text-gray-400 hover:text-gray-600"
+			title="Kembali"
+		>
+			<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+			</svg>
+		</button>
+
+		{#if $selectedCustomer}
+			<div class="flex min-w-0 flex-1 items-center gap-3">
+				{#if getCustomerAvatar($selectedCustomer)}
+					<button
+						on:click={() => handleImageClick($selectedCustomer)}
+						class="group block flex-shrink-0"
+					>
+						<img
+							class="h-11 w-11 rounded-lg object-cover shadow-sm transition-transform group-hover:scale-105"
+							src={getCustomerAvatar($selectedCustomer)}
+							alt="{$selectedCustomer.customer_name} photo"
+							loading="lazy"
+							on:error={(e) => {
+								e.target.style.display = 'none';
+								e.target.nextElementSibling.style.display = 'flex';
+							}}
+						/>
+						<div
+							class="bg-maroon-100 text-maroon-600 hidden h-11 w-11 items-center justify-center rounded-lg text-lg font-bold"
+						>
+							{getCustomerInitial($selectedCustomer)}
+						</div>
+					</button>
+				{:else}
+					<div
+						class="bg-maroon-100 text-maroon-600 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg text-lg font-bold"
+					>
+						{getCustomerInitial($selectedCustomer)}
+					</div>
+				{/if}
+				<div class="min-w-0">
+					<h1 class="truncate text-lg font-semibold text-gray-900">
+						{$selectedCustomer.title}
+						{$selectedCustomer.customer_name}
+					</h1>
+					<p class="truncate text-xs text-gray-500">
+						#{$selectedCustomer.id} · {getCustomerTypeLabel($selectedCustomer.customer_type_id)}
+					</p>
+				</div>
+			</div>
+
+			<div class="flex flex-shrink-0 gap-2">
 				<button
-					on:click={goBack}
-					class="mr-4 rounded-md p-2 text-gray-400 hover:text-gray-600"
-					title="Kembali"
+					on:click={handleEdit}
+					class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+					title="Edit"
 				>
-					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<svg
+						class="inline h-4 w-4 sm:mr-1.5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
 							stroke-width="2"
-							d="M15 19l-7-7 7-7"
+							d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
 						/>
 					</svg>
+					<span class="hidden sm:inline">Edit</span>
 				</button>
-				<div>
-					<h1 class="text-2xl font-semibold text-gray-900">Detail Pelanggan</h1>
-					<p class="text-gray-500">Informasi lengkap pelanggan</p>
-				</div>
+				<button
+					on:click={handleDelete}
+					class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+					title="Hapus"
+				>
+					<svg
+						class="inline h-4 w-4 sm:mr-1.5"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+						/>
+					</svg>
+					<span class="hidden sm:inline">Hapus</span>
+				</button>
 			</div>
-
-			{#if $selectedCustomer}
-				<div class="flex space-x-3">
-					<button
-						on:click={handleEdit}
-						class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-					>
-						<svg class="mr-2 inline h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-							/>
-						</svg>
-						Edit
-					</button>
-					<button
-						on:click={handleDelete}
-						class="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-					>
-						<svg class="mr-2 inline h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-							/>
-						</svg>
-						Hapus
-					</button>
-				</div>
-			{/if}
-		</div>
+		{:else}
+			<h1 class="text-lg font-semibold text-gray-900">Detail Pelanggan</h1>
+		{/if}
 	</div>
 
 	<!-- Error Message -->
@@ -315,340 +371,271 @@
 			</svg>
 		</div>
 	{:else if $selectedCustomer}
-		<!-- Customer Details -->
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-			<!-- Main Info -->
-			<div class="lg:col-span-2">
-				<div class="rounded-lg bg-white shadow">
-					<div class="px-6 py-4">
-						<h3 class="text-lg font-medium text-gray-900">Informasi Pelanggan</h3>
-					</div>
-					<div class="border-t border-gray-200 px-6 py-4">
-						<div class="flex gap-6">
-							<!-- Customer Photo -->
-							<div class="flex-shrink-0">
-								{#if getCustomerAvatar($selectedCustomer)}
-									<button on:click={() => handleImageClick($selectedCustomer)} class="group block">
-										<img
-											class="h-36 w-36 rounded-lg object-cover shadow-md transition-all duration-200 group-hover:scale-105 group-hover:shadow-lg"
-											src={getCustomerAvatar($selectedCustomer)}
-											alt="{$selectedCustomer.customer_name} photo"
-											loading="lazy"
-											on:error={(e) => {
-												e.target.style.display = 'none';
-												e.target.nextElementSibling.style.display = 'flex';
-											}}
-										/>
-										<div
-											class="bg-maroon-100 text-maroon-600 hidden h-36 w-36 items-center justify-center rounded-lg text-4xl font-bold shadow-md"
-										>
-											{getCustomerInitial($selectedCustomer)}
-										</div>
-									</button>
-								{:else}
-									<div
-										class="bg-maroon-100 text-maroon-600 flex h-36 w-36 items-center justify-center rounded-lg text-4xl font-bold shadow-md"
-									>
-										{getCustomerInitial($selectedCustomer)}
-									</div>
-								{/if}
-							</div>
-
-							<!-- Customer Information Grid -->
-							<div class="flex-1">
-								<dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-									<div>
-										<dt class="text-sm font-medium text-gray-500">ID Pelanggan</dt>
-										<dd class="mt-1 text-sm text-gray-900">#{$selectedCustomer.id}</dd>
-									</div>
-
-									<div>
-										<dt class="text-sm font-medium text-gray-500">Nama Lengkap</dt>
-										<dd class="mt-1 text-sm text-gray-900">
-											{$selectedCustomer.title}
-											{$selectedCustomer.customer_name}
-										</dd>
-									</div>
-
-									<div>
-										<dt class="text-sm font-medium text-gray-500">Tanggal Lahir</dt>
-										<dd class="mt-1 text-sm text-gray-900">
-											{formatDate($selectedCustomer.date_of_birth)}
-										</dd>
-									</div>
-
-									<div>
-										<dt class="text-sm font-medium text-gray-500">Nomor WhatsApp</dt>
-										<dd class="mt-1 text-sm text-gray-900">
-											{#if $selectedCustomer.whatsapp_number}
-												<a
-													href="https://wa.me/{$selectedCustomer.whatsapp_number.replace(
-														/\D/g,
-														''
-													)}"
-													target="_blank"
-													class="text-green-600 hover:text-green-800"
-												>
-													{formatPhone($selectedCustomer.whatsapp_number)}
-												</a>
-											{:else}
-												-
-											{/if}
-										</dd>
-									</div>
-
-									<div class="sm:col-span-2">
-										<dt class="text-sm font-medium text-gray-500">Alamat</dt>
-										<dd class="mt-1 text-sm text-gray-900">{$selectedCustomer.address}</dd>
-									</div>
-
-									<div>
-										<dt class="text-sm font-medium text-gray-500">Tipe Pelanggan</dt>
-										<dd class="mt-1">
-											<span
-												class="bg-maroon-100 text-maroon-800 inline-flex rounded-full px-2 text-xs leading-5 font-semibold"
-											>
-												{getCustomerTypeLabel($selectedCustomer.customer_type_id)}
-											</span>
-										</dd>
-									</div>
-
-									<div>
-										<dt class="text-sm font-medium text-gray-500">Tanggal Bergabung</dt>
-										<dd class="mt-1 text-sm text-gray-900">
-											{formatDate($selectedCustomer.subscription_date)}
-										</dd>
-									</div>
-								</dl>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- Side Info -->
-			<div class="space-y-6">
-				<!-- Business Info -->
-				<div class="rounded-lg bg-white shadow">
-					<div class="px-6 py-4">
-						<h3 class="text-lg font-medium text-gray-900">Info Bisnis</h3>
-					</div>
-					<div class="border-t border-gray-200 px-6 py-4">
-						<dl class="space-y-4">
-							<div>
-								<dt class="text-sm font-medium text-gray-500">Harga Galon 19L</dt>
-								<dd class="mt-1 text-sm text-gray-900">
-									{getGallonPriceLabel($selectedCustomer.gallon_price_id)}
-								</dd>
-							</div>
-
-							<div>
-								<dt class="text-sm font-medium text-gray-500">Stok Galon</dt>
-								<dd class="mt-1 text-sm text-gray-900">
-									{$selectedCustomer.customer_gallon_stock || 0} unit
-								</dd>
-							</div>
-
-							{#if $selectedCustomer.sub_region_name || $selectedCustomer.region_name}
-								<div>
-									<dt class="text-sm font-medium text-gray-500">Wilayah</dt>
-									<dd class="mt-1 text-sm text-gray-900">
-										{$selectedCustomer.sub_region_name || '-'}
-										{#if $selectedCustomer.region_name}
-											<span class="text-gray-500">· {$selectedCustomer.region_name}</span>
-										{/if}
-									</dd>
-								</div>
-							{:else}
-								<div>
-									<dt class="text-sm font-medium text-gray-500">Wilayah</dt>
-									<dd class="mt-1 text-sm text-gray-400">Belum dikategorikan</dd>
-								</div>
-							{/if}
-						</dl>
-					</div>
-				</div>
-
-				<!-- Location Info -->
-				<div class="rounded-lg bg-white shadow">
-					<div class="px-6 py-4">
-						<h3 class="text-lg font-medium text-gray-900">Lokasi</h3>
-					</div>
-					<div class="border-t border-gray-200 px-6 py-4">
-						<dl class="space-y-4">
-							{#if $selectedCustomer.latitude && $selectedCustomer.longitude}
-								<div>
-									<dt class="text-sm font-medium text-gray-500">Koordinat</dt>
-									<dd class="mt-1 text-sm text-gray-900">
-										{$selectedCustomer.latitude}, {$selectedCustomer.longitude}
-									</dd>
-								</div>
-								<div>
-									<a
-										href="https://maps.google.com/?q={$selectedCustomer.latitude},{$selectedCustomer.longitude}"
-										target="_blank"
-										class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
-									>
-										<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-											/>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-											/>
-										</svg>
-										Lihat di Maps
-									</a>
-								</div>
-							{:else if $selectedCustomer.address}
-								<div>
-									<p class="mb-2 text-xs text-gray-500">
-										Koordinat belum diisi - cari perkiraan lokasi dari alamat:
-									</p>
-									<a
-										href="https://www.google.com/maps/search/?api=1&query={encodeURIComponent(
-											$selectedCustomer.address
-										)}"
-										target="_blank"
-										class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
-									>
-										<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-											/>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-											/>
-										</svg>
-										Cari alamat di Maps
-									</a>
-								</div>
-							{:else}
-								<p class="text-sm text-gray-400">Alamat belum diisi.</p>
-							{/if}
-						</dl>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Saldo & Galon -->
-		<div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<!-- Saldo Pelanggan -->
-			<div class="rounded-lg bg-white shadow">
-				<div class="flex items-center justify-between px-6 py-4">
-					<h3 class="text-lg font-medium text-gray-900">Saldo Pelanggan</h3>
-					<div class="flex gap-2">
+		<!-- 🆕 Strip statistik: ganti 4 kartu ringkasan yang tadinya nyebar, jadi 1 baris ringkas -->
+		<div
+			class="mb-6 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 shadow lg:grid-cols-4"
+		>
+			<div class="bg-white px-4 py-3">
+				<p class="text-xs font-medium tracking-wide text-gray-400 uppercase">Saldo</p>
+				{#if isLoadingExtras}
+					<p class="mt-1 text-sm text-gray-400">Memuat...</p>
+				{:else}
+					<p class="text-maroon-700 text-lg font-semibold">{formatCurrency(customerBalance)}</p>
+					<div class="mt-1 flex gap-3 text-xs">
+						<button
+							on:click={() => (showAddBalanceModal = true)}
+							class="text-maroon-600 font-medium hover:underline"
+						>
+							+ Saldo
+						</button>
 						{#if $auth.user?.role === 'Admin'}
 							<button
 								on:click={() => (showEditBalanceModal = true)}
-								class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+								class="text-gray-400 hover:underline"
 							>
-								Koreksi Saldo
+								Koreksi
 							</button>
 						{/if}
-						<button
-							on:click={() => (showAddBalanceModal = true)}
-							class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-3 py-1.5 text-sm font-medium text-white"
-						>
-							+ Tambah Saldo
-						</button>
 					</div>
-				</div>
-				<div class="border-t border-gray-200 px-6 py-4">
-					{#if isLoadingExtras}
-						<p class="text-sm text-gray-400">Memuat saldo...</p>
-					{:else}
-						<p class="text-maroon-700 text-3xl font-semibold">{formatCurrency(customerBalance)}</p>
-						<p class="mt-1 text-xs text-gray-500">
-							Saldo dipakai otomatis buat bayar hutang saat transaksi baru dibuat.
-						</p>
-					{/if}
-				</div>
+				{/if}
 			</div>
 
-			<!-- Galon -->
-			<div class="rounded-lg bg-white shadow">
-				<div class="px-6 py-4">
-					<h3 class="text-lg font-medium text-gray-900">Galon</h3>
-				</div>
-				<div class="border-t border-gray-200 px-6 py-4">
-					{#if isLoadingExtras}
-						<p class="text-sm text-gray-400">Memuat data galon...</p>
-					{:else}
-						<div class="mb-4">
-							<p class="text-sm text-gray-500">Galon Belum Retur</p>
-							<p
-								class="text-2xl font-semibold {(gallonStock?.unreturned_gallons || 0) > 0
-									? 'text-yellow-700'
-									: 'text-green-700'}"
-							>
-								{gallonStock?.unreturned_gallons ?? 0} galon
-							</p>
-						</div>
+			<div class="bg-white px-4 py-3">
+				<p class="text-xs font-medium tracking-wide text-gray-400 uppercase">Stok Galon</p>
+				{#if isLoadingExtras}
+					<p class="mt-1 text-sm text-gray-400">Memuat...</p>
+				{:else}
+					<p
+						class="text-lg font-semibold {(gallonStock?.unreturned_gallons || 0) > 0
+							? 'text-yellow-700'
+							: 'text-green-700'}"
+					>
+						{gallonStock?.unreturned_gallons ?? 0} galon
+					</p>
+					<p class="mt-1 text-xs text-gray-500">Belum retur ke gudang</p>
+				{/if}
+			</div>
 
-						<p class="mb-2 text-sm font-medium text-gray-700">Riwayat Pergerakan</p>
-						{#if gallonMovements.length === 0}
-							<p class="text-sm text-gray-400">Belum ada riwayat pergerakan galon.</p>
-						{:else}
-							<div class="max-h-64 overflow-y-auto rounded-md border border-gray-100">
-								<table class="min-w-full divide-y divide-gray-100 text-sm">
-									<thead class="bg-gray-50">
-										<tr>
-											<th class="px-3 py-2 text-left font-medium text-gray-500">Tanggal</th>
-											<th class="px-3 py-2 text-right font-medium text-gray-500"
-												>Isi/Kosong/Retur</th
-											>
-											<th class="px-3 py-2 text-right font-medium text-gray-500">Saldo Galon</th>
-										</tr>
-									</thead>
-									<tbody class="divide-y divide-gray-100">
-										{#each gallonMovements as movement (movement.transaction_id)}
-											<tr>
-												<td class="px-3 py-2 whitespace-nowrap text-gray-700">
-													{new Date(movement.transaction_date).toLocaleDateString('id-ID', {
-														year: 'numeric',
-														month: 'short',
-														day: 'numeric'
-													})}
-												</td>
-												<td class="px-3 py-2 text-right whitespace-nowrap text-gray-700">
-													{movement.gallon_filled} / {movement.gallon_empty} / {movement.gallon_returned}
-												</td>
-												<td
-													class="px-3 py-2 text-right font-medium whitespace-nowrap text-gray-900"
-												>
-													{movement.saldo_galon}
-												</td>
-											</tr>
-										{/each}
-									</tbody>
-								</table>
-							</div>
-						{/if}
-					{/if}
-				</div>
+			<div class="bg-white px-4 py-3">
+				<p class="text-xs font-medium tracking-wide text-gray-400 uppercase">Status Hutang</p>
+				{#if isLoadingTransactions}
+					<p class="mt-1 text-sm text-gray-400">Memuat...</p>
+				{:else if totalRemainingDebt > 0}
+					<p class="text-lg font-semibold text-yellow-700">{formatCurrency(totalRemainingDebt)}</p>
+					<p class="mt-1 text-xs text-gray-500">
+						{unpaidTransactions.length} transaksi belum lunas
+					</p>
+				{:else}
+					<p class="text-lg font-semibold text-green-700">Lunas</p>
+					<p class="mt-1 text-xs text-gray-500">Gak ada hutang aktif</p>
+				{/if}
+			</div>
+
+			<div class="bg-white px-4 py-3">
+				<p class="text-xs font-medium tracking-wide text-gray-400 uppercase">Wilayah</p>
+				{#if $selectedCustomer.sub_region_name || $selectedCustomer.region_name}
+					<p class="truncate text-lg font-semibold text-gray-900">
+						{$selectedCustomer.sub_region_name || '-'}
+					</p>
+					<p class="mt-1 truncate text-xs text-gray-500">{$selectedCustomer.region_name || ''}</p>
+				{:else}
+					<p class="text-lg font-semibold text-gray-400">-</p>
+					<p class="mt-1 text-xs text-gray-500">Belum dikategorikan</p>
+				{/if}
 			</div>
 		</div>
 
-		<!-- Riwayat Transaksi & Hutang Pelanggan Ini -->
-		<div class="mt-6 rounded-lg bg-white shadow">
-			<div class="px-6 py-4">
-				<h3 class="text-lg font-medium text-gray-900">Riwayat Transaksi</h3>
+		<!-- 🆕 Tab: Info Pelanggan / Riwayat Transaksi / Galon - ganti tumpukan kartu vertikal -->
+		<div class="mb-6 border-b border-gray-200">
+			<nav class="-mb-px flex gap-6">
+				<button
+					type="button"
+					on:click={() => (activeTab = 'info')}
+					class="border-b-2 px-1 py-3 text-sm font-medium {activeTab === 'info'
+						? 'border-maroon-600 text-maroon-600'
+						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
+				>
+					Info Pelanggan
+				</button>
+				<button
+					type="button"
+					on:click={() => (activeTab = 'transaksi')}
+					class="border-b-2 px-1 py-3 text-sm font-medium {activeTab === 'transaksi'
+						? 'border-maroon-600 text-maroon-600'
+						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
+				>
+					Riwayat Transaksi
+					{#if customerTransactions.length > 0}
+						<span
+							class="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-500"
+						>
+							{customerTransactions.length}
+						</span>
+					{/if}
+				</button>
+				<button
+					type="button"
+					on:click={() => (activeTab = 'galon')}
+					class="border-b-2 px-1 py-3 text-sm font-medium {activeTab === 'galon'
+						? 'border-maroon-600 text-maroon-600'
+						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
+				>
+					Galon
+				</button>
+			</nav>
+		</div>
+
+		{#if activeTab === 'info'}
+			<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+				<!-- Data Diri -->
+				<div class="rounded-lg bg-white shadow">
+					<div class="px-6 py-4">
+						<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">Data Diri</h3>
+					</div>
+					<div class="border-t border-gray-200 px-6 py-2">
+						<dl class="divide-y divide-gray-100">
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="text-gray-500">Nama Lengkap</dt>
+								<dd class="text-right font-medium text-gray-900">
+									{$selectedCustomer.title}
+									{$selectedCustomer.customer_name}
+								</dd>
+							</div>
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="text-gray-500">Tanggal Lahir</dt>
+								<dd class="text-right text-gray-900">
+									{formatDate($selectedCustomer.date_of_birth)}
+								</dd>
+							</div>
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="text-gray-500">No. WhatsApp</dt>
+								<dd class="text-right">
+									{#if $selectedCustomer.whatsapp_number}
+										<a
+											href="https://wa.me/{$selectedCustomer.whatsapp_number.replace(/\D/g, '')}"
+											target="_blank"
+											class="text-green-600 hover:text-green-800"
+										>
+											{formatPhone($selectedCustomer.whatsapp_number)}
+										</a>
+									{:else}
+										<span class="text-gray-900">-</span>
+									{/if}
+								</dd>
+							</div>
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="flex-shrink-0 text-gray-500">Alamat</dt>
+								<dd class="max-w-[65%] text-right text-gray-900">
+									{$selectedCustomer.address || '-'}
+								</dd>
+							</div>
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="text-gray-500">Tanggal Bergabung</dt>
+								<dd class="text-right text-gray-900">
+									{formatDate($selectedCustomer.subscription_date)}
+								</dd>
+							</div>
+						</dl>
+					</div>
+				</div>
+
+				<!-- Bisnis & Lokasi -->
+				<div class="rounded-lg bg-white shadow">
+					<div class="px-6 py-4">
+						<h3 class="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+							Bisnis & Lokasi
+						</h3>
+					</div>
+					<div class="border-t border-gray-200 px-6 py-2">
+						<dl class="divide-y divide-gray-100">
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="text-gray-500">Harga Galon 19L</dt>
+								<dd class="text-right text-gray-900">
+									{getGallonPriceLabel($selectedCustomer.gallon_price_id)}
+								</dd>
+							</div>
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="text-gray-500">Tipe Pelanggan</dt>
+								<dd class="text-right">
+									<span
+										class="bg-maroon-100 text-maroon-800 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold"
+									>
+										{getCustomerTypeLabel($selectedCustomer.customer_type_id)}
+									</span>
+								</dd>
+							</div>
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="text-gray-500">Kecamatan</dt>
+								<dd class="text-right text-gray-900">{$selectedCustomer.region_name || '-'}</dd>
+							</div>
+							<div class="flex justify-between gap-4 py-3 text-sm">
+								<dt class="text-gray-500">Sub-Wilayah</dt>
+								<dd class="text-right text-gray-900">{$selectedCustomer.sub_region_name || '-'}</dd>
+							</div>
+						</dl>
+
+						<div class="mt-2 border-t border-gray-100 pt-4">
+							{#if $selectedCustomer.latitude && $selectedCustomer.longitude}
+								<p class="mb-1 text-xs text-gray-500">
+									Koordinat: {$selectedCustomer.latitude}, {$selectedCustomer.longitude}
+								</p>
+								<a
+									href="https://maps.google.com/?q={$selectedCustomer.latitude},{$selectedCustomer.longitude}"
+									target="_blank"
+									class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+								>
+									<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+									</svg>
+									Lihat di Maps
+								</a>
+							{:else if $selectedCustomer.address}
+								<p class="mb-2 text-xs text-gray-500">
+									Koordinat belum diisi - cari perkiraan lokasi dari alamat:
+								</p>
+								<a
+									href="https://www.google.com/maps/search/?api=1&query={encodeURIComponent(
+										$selectedCustomer.address
+									)}"
+									target="_blank"
+									class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+								>
+									<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+									</svg>
+									Cari alamat di Maps
+								</a>
+							{:else}
+								<p class="text-sm text-gray-400">Alamat belum diisi.</p>
+							{/if}
+						</div>
+					</div>
+				</div>
 			</div>
-			<div class="border-t border-gray-200">
+		{:else if activeTab === 'transaksi'}
+			<div class="rounded-lg bg-white shadow">
 				{#if isLoadingTransactions}
 					<p class="px-6 py-4 text-sm text-gray-400">Memuat riwayat transaksi...</p>
 				{:else if customerTransactions.length === 0}
@@ -666,10 +653,7 @@
 							</thead>
 							<tbody class="divide-y divide-gray-100">
 								{#each customerTransactions as tx (tx.id)}
-									{@const remaining =
-										tx.remaining_debt !== undefined && tx.remaining_debt !== null
-											? Number(tx.remaining_debt)
-											: 0}
+									{@const remaining = getRemainingDebt(tx)}
 									<tr class="hover:bg-gray-50">
 										<td class="px-4 py-2 whitespace-nowrap text-gray-700">
 											{transactionHelpers.formatDate(tx.transaction_date)}
@@ -704,7 +688,66 @@
 					</div>
 				{/if}
 			</div>
-		</div>
+		{:else if activeTab === 'galon'}
+			<div class="rounded-lg bg-white shadow">
+				<div class="px-6 py-4">
+					{#if isLoadingExtras}
+						<p class="text-sm text-gray-400">Memuat data galon...</p>
+					{:else}
+						<p class="text-sm text-gray-500">Galon Belum Retur</p>
+						<p
+							class="text-2xl font-semibold {(gallonStock?.unreturned_gallons || 0) > 0
+								? 'text-yellow-700'
+								: 'text-green-700'}"
+						>
+							{gallonStock?.unreturned_gallons ?? 0} galon
+						</p>
+					{/if}
+				</div>
+				<div class="border-t border-gray-200">
+					{#if !isLoadingExtras}
+						{#if gallonMovements.length === 0}
+							<p class="px-6 py-4 text-sm text-gray-400">Belum ada riwayat pergerakan galon.</p>
+						{:else}
+							<div class="overflow-x-auto">
+								<table class="min-w-full divide-y divide-gray-100 text-sm">
+									<thead class="bg-gray-50">
+										<tr>
+											<th class="px-4 py-2 text-left font-medium text-gray-500">Tanggal</th>
+											<th class="px-4 py-2 text-right font-medium text-gray-500"
+												>Isi/Kosong/Retur</th
+											>
+											<th class="px-4 py-2 text-right font-medium text-gray-500">Saldo Galon</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-gray-100">
+										{#each gallonMovements as movement (movement.transaction_id)}
+											<tr class="hover:bg-gray-50">
+												<td class="px-4 py-2 whitespace-nowrap text-gray-700">
+													{new Date(movement.transaction_date).toLocaleDateString('id-ID', {
+														year: 'numeric',
+														month: 'short',
+														day: 'numeric'
+													})}
+												</td>
+												<td class="px-4 py-2 text-right whitespace-nowrap text-gray-700">
+													{movement.gallon_filled} / {movement.gallon_empty} / {movement.gallon_returned}
+												</td>
+												<td
+													class="px-4 py-2 text-right font-medium whitespace-nowrap text-gray-900"
+												>
+													{movement.saldo_galon}
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						{/if}
+					{/if}
+				</div>
+			</div>
+		{/if}
 	{:else}
 		<div class="py-12 text-center">
 			<svg
