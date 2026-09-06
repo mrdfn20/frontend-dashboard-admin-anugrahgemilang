@@ -140,6 +140,7 @@
 		if (isActiveRoute('/dashboard/regions')) return 'Kelola Wilayah';
 		if (isActiveRoute('/dashboard/payments')) return 'Manajemen Pembayaran';
 		if (isActiveRoute('/dashboard/reports')) return 'Laporan';
+		if (isActiveRoute('/dashboard/help')) return 'Panduan Penggunaan';
 		if ($page.url.pathname === '/dashboard') return 'Dashboard';
 		return 'Dashboard';
 	}
@@ -542,6 +543,36 @@
 						/>
 					</svg>
 					<span class="transition-all duration-200 group-hover:translate-x-1">Laporan</span>
+				</a>
+
+				<!-- Panduan Penggunaan (semua role) -->
+				<a
+					href="/dashboard/help"
+					on:click={handleMenuClick}
+					class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+						   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+						   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+						   {isActiveRoute('/dashboard/help')
+						? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+						: ''}"
+					role="listitem"
+					aria-current={isActiveRoute('/dashboard/help') ? 'page' : undefined}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+					<span class="transition-all duration-200 group-hover:translate-x-1">Panduan</span>
 				</a>
 			</nav>
 
