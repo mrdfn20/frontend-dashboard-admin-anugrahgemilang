@@ -6,7 +6,7 @@ SvelteKit admin dashboard for CV Anugrah Gemilang's water-gallon delivery busine
 
 - 🔐 Login with JWT (access + refresh token, auto-refresh on expiry)
 - 👥 **Pelanggan** — customer CRUD (soft-delete with a "Pelanggan Terhapus" restore page), Google-Drive-hosted photo, search, filters (customer type, gallon price, debt status, region/sub-region), "active/inactive this month" cards (click to filter the list), balance + outstanding-debt columns, Admin-only balance correction (hard set, distinct from the additive "Tambah Saldo")
-- 💰 **Transaksi** — create Tunai/Hutang transactions via type-ahead customer picker (no more dropdown), live "estimated total" and Tunai/Hutang guidance as you type the paid amount, restore soft-deleted transactions, pay off debts inline
+- 💰 **Transaksi** — create Tunai/Hutang transactions via type-ahead customer picker (keyboard-navigable with arrow keys/Enter), live "estimated total", customer balance shown inline, and Tunai/Hutang guidance as you type the paid amount; restore soft-deleted transactions; pay off debts inline (overpayment allowed, credited to balance, backdatable payment date up to today); transaction status/remaining debt is always computed live from `payment_logs`, never from a stale creation-time snapshot
 - 🚰 **Galon** — current unreturned-gallon stock per customer, plus a global movement history tab with running balance
 - 🧾 **Hutang** — cross-customer debt list with status/date/name filters, pay directly from the list
 - 🚚 **Kelola Armada** — fleet CRUD (Admin only)
@@ -110,5 +110,5 @@ pm2 logs cv-anugrah-frontend       # tail logs
 
 ## Known conventions
 
-- Modal backdrop across the app: `fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300` (frosted glass, not a solid dark overlay).
+- Modal backdrop across the app: `fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300` (frosted glass, not a solid dark overlay). Every modal's outer `fixed inset-0 z-50` wrapper also carries `use:lockBodyScroll` (`src/lib/actions/lockBodyScroll.js`) so the page behind it can't be scrolled while it's open.
 - Money inputs use the shared `CurrencyInput` component (`src/lib/components/ui/CurrencyInput.svelte`); plain numeric inputs use the `selectOnFocus` action so a click lets you type over the value immediately instead of having to delete it first.
