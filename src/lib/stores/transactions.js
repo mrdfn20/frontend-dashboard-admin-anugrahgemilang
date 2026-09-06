@@ -209,8 +209,21 @@ export const transactionActions = {
 		try {
 			await api.transactions.delete(id);
 
-			// Remove from local store
-			transactions.update((current) => current.filter((transaction) => transaction.id !== id));
+			// Remove from local store, dan pindahin ke daftar "terhapus" (biar modal Transaksi
+			// Terhapus langsung kelihatan tanpa perlu reload/reload manual daftar itu lagi)
+			let deletedRecord = null;
+			transactions.update((current) =>
+				current.filter((transaction) => {
+					if (transaction.id === id) {
+						deletedRecord = { ...transaction, deleted_at: new Date().toISOString() };
+						return false;
+					}
+					return true;
+				})
+			);
+			if (deletedRecord) {
+				deletedTransactions.update((current) => [deletedRecord, ...current]);
+			}
 			pagination.update((p) => ({ ...p, total: Math.max(0, p.total - 1) }));
 
 			toast.success('Transaksi berhasil dihapus!');

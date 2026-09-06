@@ -1,5 +1,6 @@
 <!-- src/lib/components/transactions/TransactionForm.svelte -->
 <script>
+	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
 	import { onMount, createEventDispatcher } from 'svelte';
 	import { transactionActions } from '$lib/stores/transactions.js';
 	import { api } from '$lib/services/api.js';
@@ -47,6 +48,8 @@
 	let customerQuery = '';
 	let selectedCustomer = null;
 	let showSuggestions = false;
+	let highlightedIndex = -1;
+	let customerBalance = null;
 
 	const currencyFormatter = new Intl.NumberFormat('id-ID');
 	function formatRp(value) {
@@ -61,6 +64,9 @@
 			.slice(0, 20);
 	})();
 
+	// Reset highlight tiap kali daftar saran berubah, biar gak nyasar ke index lama
+	$: filteredSuggestions, (highlightedIndex = -1);
+
 	function handleCustomerInput() {
 		showSuggestions = true;
 		// Kalau teks diubah manual setelah sebelumnya sudah pilih pelanggan, batalkan pilihan
@@ -68,19 +74,51 @@
 		if (selectedCustomer && customerQuery !== selectedCustomer.customer_name) {
 			selectedCustomer = null;
 			formData.customer_id = '';
+			customerBalance = null;
 		}
 	}
 
-	function selectCustomer(customer) {
+	async function selectCustomer(customer) {
 		selectedCustomer = customer;
 		formData.customer_id = customer.id;
 		customerQuery = customer.customer_name;
 		showSuggestions = false;
+		highlightedIndex = -1;
+
+		customerBalance = null;
+		try {
+			const balance = await api.customerBalance.getById(customer.id);
+			customerBalance = balance?.balance || 0;
+		} catch {
+			// 404 = belum pernah ada saldo, dianggap 0 - bukan error blocking
+			customerBalance = 0;
+		}
 	}
 
 	function handleCustomerBlur() {
 		// Delay dikit supaya klik di item suggestion sempat ketangkep dulu sebelum list ditutup
 		setTimeout(() => (showSuggestions = false), 150);
+	}
+
+	// Navigasi panah atas/bawah + Enter buat pilih saran tanpa mouse
+	function handleCustomerKeydown(event) {
+		if (!showSuggestions || filteredSuggestions.length === 0) return;
+
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			highlightedIndex = (highlightedIndex + 1) % filteredSuggestions.length;
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			highlightedIndex =
+				(highlightedIndex - 1 + filteredSuggestions.length) % filteredSuggestions.length;
+		} else if (event.key === 'Enter') {
+			if (highlightedIndex >= 0) {
+				event.preventDefault();
+				selectCustomer(filteredSuggestions[highlightedIndex]);
+			}
+		} else if (event.key === 'Escape') {
+			showSuggestions = false;
+		}
 	}
 
 	// ===== Estimasi total & penjelasan Tunai/Hutang =====
@@ -163,7 +201,7 @@
 </script>
 
 <!-- Modal Overlay -->
-<div class="fixed inset-0 z-50 overflow-y-auto">
+<div class="fixed inset-0 z-50 overflow-y-auto" use:lockBodyScroll>
 	<div class="flex min-h-screen items-center justify-center px-4 py-6">
 		<div
 			class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"
@@ -203,6 +241,7 @@
 								autocomplete="off"
 								bind:value={customerQuery}
 								on:input={handleCustomerInput}
+								on:keydown={handleCustomerKeydown}
 								on:focus={() => (showSuggestions = true)}
 								on:blur={handleCustomerBlur}
 								placeholder="Ketik ID atau nama pelanggan..."
@@ -213,12 +252,16 @@
 								<ul
 									class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
 								>
-									{#each filteredSuggestions as customer (customer.id)}
+									{#each filteredSuggestions as customer, i (customer.id)}
 										<li>
 											<button
 												type="button"
-												on:click={() => selectCustomer(customer)}
-												class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50"
+												on:mousedown|preventDefault={() => selectCustomer(customer)}
+												on:mouseenter={() => (highlightedIndex = i)}
+												class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50 {i ===
+												highlightedIndex
+													? 'bg-gray-50'
+													: ''}"
 											>
 												<span class="text-gray-900">
 													#{customer.id} - {customer.customer_name}
@@ -239,7 +282,10 @@
 							{/if}
 							{#if selectedCustomer}
 								<p class="mt-1 text-xs text-gray-500">
-									Harga galon pelanggan ini: {formatRp(selectedCustomer.price)}
+									Harga galon pelanggan ini: {formatRp(selectedCustomer.price)} · Saldo: {customerBalance ===
+									null
+										? 'memuat...'
+										: formatRp(customerBalance)}
 								</p>
 							{/if}
 							{#if errors.customer_id}
@@ -288,7 +334,7 @@
 						<!-- Galon Kembali -->
 						<div>
 							<label for="gallon_returned" class="block text-sm font-medium text-gray-700">
-								Galon Kembali <span class="text-red-500">*</span>
+								Galon Kembali/Retur <span class="text-red-500">*</span>
 							</label>
 							<input
 								id="gallon_returned"
@@ -358,14 +404,16 @@
 										value="Hutang"
 										class="text-maroon-600 focus:ring-maroon-500"
 									/>
-									Hutang / Nominal Custom
+									Bayar Sebagian / Lebih / Hutang
 								</label>
 							</div>
 							<p class="mt-1 text-xs text-gray-500">
-								Pilih <strong>Tunai</strong> kalau pelanggan langsung lunas penuh saat ini juga.
-								Pilih
-								<strong>Hutang</strong> kalau nominal bayarnya beda dari total tagihan - baik itu kurang
-								(jadi hutang), pas, maupun lebih (kelebihannya otomatis masuk saldo pelanggan).
+								Pilih <strong>Tunai</strong> kalau nominal bayarnya PAS sama total tagihan. Pilih
+								opsi
+								<strong>kedua</strong> buat SEMUA kasus lain: bayar kurang (sisanya jadi hutang),
+								atau
+								<strong>bayar lebih</strong> (misal pelanggan kasih uang lebih buat nitip/nambah saldo)
+								- kelebihannya otomatis masuk Saldo Pelanggan, dipakai otomatis buat transaksi berikutnya.
 							</p>
 						</div>
 

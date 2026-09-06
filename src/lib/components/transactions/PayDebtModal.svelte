@@ -1,5 +1,6 @@
 <!-- src/lib/components/transactions/PayDebtModal.svelte -->
 <script>
+	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
 	import { onMount } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 	import { transactionActions, transactionHelpers } from '$lib/stores/transactions.js';
@@ -14,8 +15,10 @@
 
 	let paymentHistory = [];
 	let isLoadingHistory = true;
+	let customerBalance = null;
 	let amount_paid = 0;
 	let payment_date = new Date().toISOString().slice(0, 10);
+	let today = new Date().toISOString().slice(0, 10);
 	let errorMessage = '';
 	let isSubmitting = false;
 
@@ -23,6 +26,13 @@
 		transaction.remaining_debt !== undefined && transaction.remaining_debt !== null
 			? Number(transaction.remaining_debt)
 			: Math.max(0, Number(transaction.total_price) - Number(transaction.payment_amount || 0));
+
+	// Info kelebihan bayar - bukan error, kelebihannya otomatis masuk saldo pelanggan
+	// (konsisten sama alur bayar lebih pas bikin transaksi baru).
+	$: overpayInfo =
+		Number(amount_paid) > remainingDebt
+			? `Kelebihan ${transactionHelpers.formatCurrency(Number(amount_paid) - remainingDebt)} akan otomatis masuk sebagai Saldo Pelanggan.`
+			: null;
 
 	onMount(async () => {
 		try {
@@ -34,6 +44,14 @@
 		} finally {
 			isLoadingHistory = false;
 		}
+
+		try {
+			const balance = await api.customerBalance.getById(transaction.customer_id);
+			customerBalance = balance?.balance || 0;
+		} catch {
+			// 404 = belum pernah ada saldo, dianggap 0 - bukan error blocking
+			customerBalance = 0;
+		}
 	});
 
 	function validate() {
@@ -42,10 +60,6 @@
 
 		if (!amount_paid || isNaN(amount) || amount <= 0) {
 			errorMessage = 'Jumlah bayar wajib diisi dan lebih dari 0';
-			return false;
-		}
-		if (amount > remainingDebt) {
-			errorMessage = `Jumlah bayar tidak boleh melebihi sisa hutang (${transactionHelpers.formatCurrency(remainingDebt)})`;
 			return false;
 		}
 		return true;
@@ -71,7 +85,7 @@
 	}
 </script>
 
-<div class="fixed inset-0 z-50 overflow-y-auto">
+<div class="fixed inset-0 z-50 overflow-y-auto" use:lockBodyScroll>
 	<div class="flex min-h-screen items-center justify-center px-4 py-6">
 		<div
 			class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"
@@ -128,6 +142,14 @@
 							{transactionHelpers.formatCurrency(remainingDebt)}
 						</span>
 					</div>
+					<div class="flex justify-between border-t border-gray-200 py-1 pt-2">
+						<span class="text-gray-500">Saldo Pelanggan</span>
+						<span class="text-gray-800">
+							{customerBalance === null
+								? 'Memuat...'
+								: transactionHelpers.formatCurrency(customerBalance)}
+						</span>
+					</div>
 				</div>
 
 				<!-- Riwayat pembayaran -->
@@ -142,9 +164,13 @@
 							{#each paymentHistory as log (log.id)}
 								<li class="flex justify-between px-3 py-2 text-sm">
 									<span class="text-gray-600">
-										{log.payment_date
-											? transactionHelpers.formatDate(log.payment_date)
-											: 'Belum dibayar'}
+										{#if Number(log.amount_paid) <= 0}
+											Belum dibayar
+										{:else if log.payment_date}
+											{transactionHelpers.formatDate(log.payment_date)}
+										{:else}
+											Saat transaksi dibuat
+										{/if}
 									</span>
 									<span class="font-medium text-gray-900">
 										{transactionHelpers.formatCurrency(log.amount_paid)}
@@ -162,6 +188,9 @@
 							Jumlah Bayar <span class="text-red-500">*</span>
 						</label>
 						<CurrencyInput id="amount_paid" bind:value={amount_paid} placeholder="0" />
+						{#if overpayInfo}
+							<p class="mt-1 text-xs font-medium text-green-600">{overpayInfo}</p>
+						{/if}
 					</div>
 					<div>
 						<label for="payment_date" class="block text-sm font-medium text-gray-700">
@@ -170,9 +199,14 @@
 						<input
 							id="payment_date"
 							type="date"
+							max={today}
 							bind:value={payment_date}
 							class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
 						/>
+						<p class="mt-1 text-xs text-gray-500">
+							Bisa pilih tanggal lampau kalau nyatet pembayaran yang telat diinput. Gak bisa pilih
+							tanggal yang belum terjadi.
+						</p>
 					</div>
 
 					{#if errorMessage}
