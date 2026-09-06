@@ -105,7 +105,15 @@
 				},
 				{
 					q: 'Cara export ke Excel/CSV',
-					a: 'Setelah laporan muncul, klik "Export CSV" - file bisa dibuka di Excel/Google Sheets.'
+					a: 'Setelah laporan muncul, klik "⬇ CSV" - file bisa dibuka di Excel/Google Sheets.'
+				},
+				{
+					q: 'Cara export ke PDF / share ke WhatsApp',
+					a: 'Klik "⬇ PDF" buat download laporan dalam bentuk PDF siap cetak/kirim. Tombol "Share ke WA" buka WhatsApp dengan ringkasan (teks) laporan udah keisi - WhatsApp gak bisa otomatis nempelin file PDF-nya, jadi kalau mau kirim PDF-nya juga, export dulu terus lampirkan manual dari WhatsApp.'
+				},
+				{
+					q: 'Cara lihat laporan/statement 1 pelanggan tertentu',
+					a: 'Di kotak "Pelanggan" atas halaman Laporan, ketik nama/ID pelanggan lalu pilih dari saran yang muncul - seluruh laporan (ringkasan & detail transaksi) otomatis nyempit ke pelanggan itu doang. Klik ikon silang buat balik ke laporan semua pelanggan.'
 				}
 			]
 		},

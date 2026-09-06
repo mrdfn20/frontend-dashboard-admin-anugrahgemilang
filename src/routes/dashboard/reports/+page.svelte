@@ -16,6 +16,8 @@
 	import { transactionHelpers } from '$lib/stores/transactions.js';
 	import TransactionTable from '$lib/components/transactions/TransactionTable.svelte';
 	import { exportToCsv } from '$lib/utils/csv.js';
+	import { generateReportPdf } from '$lib/utils/pdf.js';
+	import { shareToWhatsApp, buildReportShareText } from '$lib/utils/whatsapp.js';
 
 	// ===== Autosuggest Pelanggan (pola sama kayak form Tambah Transaksi) =====
 	let customerQuery = '';
@@ -108,6 +110,26 @@
 			: 'laporan-transaksi';
 		exportToCsv(rows, columns, `${filenamePart}-${$dateRange.startDate}_${$dateRange.endDate}`);
 	}
+
+	function handleExportPdf() {
+		generateReportPdf({
+			dateRange: $dateRange,
+			customer: $reportCustomer,
+			summary: $summary,
+			regionSummary: $regionSummary,
+			transactions: $transactions,
+			getCustomerName
+		});
+	}
+
+	function handleShareWhatsApp() {
+		const text = buildReportShareText({
+			dateRange: $dateRange,
+			customer: $reportCustomer,
+			summary: $summary
+		});
+		shareToWhatsApp(text);
+	}
 </script>
 
 <div class="p-6">
@@ -199,22 +221,13 @@
 					class="focus:ring-maroon-500 focus:border-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none"
 				/>
 			</div>
-			<div class="flex items-end gap-2">
+			<div class="flex items-end">
 				<button
 					type="submit"
 					disabled={$isLoading}
 					class="bg-maroon-600 hover:bg-maroon-700 w-full rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm disabled:opacity-50"
 				>
 					{$isLoading ? 'Memuat...' : 'Buat Laporan'}
-				</button>
-				<button
-					type="button"
-					on:click={handleExport}
-					disabled={$transactions.length === 0}
-					title="Export CSV"
-					class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-				>
-					⬇
 				</button>
 			</div>
 		</div>
@@ -247,6 +260,33 @@
 				</p>
 			</div>
 		{/if}
+
+		<!-- Export toolbar -->
+		<div class="mb-4 flex flex-wrap justify-end gap-2">
+			<button
+				type="button"
+				on:click={handleExport}
+				disabled={$transactions.length === 0}
+				class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+			>
+				⬇ CSV
+			</button>
+			<button
+				type="button"
+				on:click={handleExportPdf}
+				class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+			>
+				⬇ PDF
+			</button>
+			<button
+				type="button"
+				on:click={handleShareWhatsApp}
+				class="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
+				title="Buka WhatsApp dengan ringkasan laporan (teks) - PDF-nya perlu diexport & dilampirkan manual"
+			>
+				Share ke WA
+			</button>
+		</div>
 
 		<!-- Summary cards -->
 		<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

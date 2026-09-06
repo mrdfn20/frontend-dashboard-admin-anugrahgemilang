@@ -11,7 +11,7 @@ SvelteKit admin dashboard for CV Anugrah Gemilang's water-gallon delivery busine
 - 🧾 **Hutang** — cross-customer debt list with status/date/name filters, pay directly from the list
 - 🚚 **Kelola Armada** — fleet CRUD (Admin only)
 - 🗺️ **Kelola Wilayah** — region (kecamatan) & sub-region CRUD (Admin only), feeds the Pelanggan filters and the per-region report
-- 📊 **Dashboard** & **Laporan** — summary cards + custom date-range report with CSV export, an omzet/hutang breakdown table per region, and an optional per-customer statement (type-ahead picker narrows the whole report to one customer)
+- 📊 **Dashboard** & **Laporan** — summary cards + custom date-range report, an omzet/hutang breakdown table per region, and an optional per-customer statement (type-ahead picker narrows the whole report to one customer); export as CSV or PDF (`jsPDF`/`jspdf-autotable`, generated client-side), or share a text summary straight to WhatsApp (`wa.me` link — WhatsApp has no way to auto-attach a file via URL, so sharing the PDF itself is still a manual "export then attach" step)
 - 👤 **User Management** & **Audit Log** (Admin only)
 - 🔍 Global search overlay (`Ctrl+K`)
 - Currency inputs with thousand-separator formatting and select-on-focus; infinite-scroll lists (server-side paginated for Transaksi/Audit Log/Hutang, the datasets that grow without bound)
