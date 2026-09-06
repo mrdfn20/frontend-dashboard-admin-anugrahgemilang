@@ -323,7 +323,9 @@ const api = {
 
 	// Report endpoints
 	reports: {
-		getSummary: (startDate, endDate) => api.get('/reports/summary', { startDate, endDate }),
+		// customerId opsional - kalau diisi, ringkasan dipersempit ke 1 pelanggan itu doang (statement)
+		getSummary: (startDate, endDate, customerId) =>
+			api.get('/reports/summary', { startDate, endDate, ...(customerId ? { customerId } : {}) }),
 		getSummaryByRegion: (startDate, endDate) =>
 			api.get('/reports/summary-by-region', { startDate, endDate })
 	},

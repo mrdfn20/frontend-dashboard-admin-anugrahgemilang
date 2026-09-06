@@ -1,10 +1,11 @@
 // src/lib/stores/reports.js
 
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { api } from '../services/api.js';
 
 /**
- * Laporan Store - ringkasan + detail transaksi dalam satu rentang tanggal.
+ * Laporan Store - ringkasan + detail transaksi dalam satu rentang tanggal,
+ * opsional dipersempit ke 1 pelanggan (statement per pelanggan).
  */
 
 function defaultDateRange() {
@@ -16,6 +17,8 @@ function defaultDateRange() {
 }
 
 export const dateRange = writable(defaultDateRange());
+// null = laporan global (semua pelanggan). Diisi objek customer kalau mau statement 1 pelanggan.
+export const reportCustomer = writable(null);
 export const summary = writable(null);
 export const regionSummary = writable([]);
 export const transactions = writable([]);
@@ -29,16 +32,21 @@ export const reportActions = {
 		error.set(null);
 
 		try {
-			const range = await new Promise((resolve) => {
-				dateRange.subscribe((r) => resolve(r))();
-			});
+			const range = get(dateRange);
+			const customer = get(reportCustomer);
+			const customerId = customer?.id;
 
+			// Ringkasan per wilayah gak relevan kalau lagi liat statement 1 pelanggan doang
+			// (dia cuma ada di 1 wilayah) - skip biar gak ada request/tampilan yang gak perlu.
 			const [summaryData, regionSummaryData, transactionsData] = await Promise.all([
-				api.reports.getSummary(range.startDate, range.endDate),
-				api.reports.getSummaryByRegion(range.startDate, range.endDate),
+				api.reports.getSummary(range.startDate, range.endDate, customerId),
+				customerId
+					? Promise.resolve([])
+					: api.reports.getSummaryByRegion(range.startDate, range.endDate),
 				api.transactions.getByFilter({
 					startDate: range.startDate,
 					endDate: range.endDate,
+					...(customerId ? { customer_id: customerId } : {}),
 					sortBy: 'transaction_date',
 					sortOrder: 'DESC'
 				})
@@ -59,5 +67,9 @@ export const reportActions = {
 
 	setDateRange(range) {
 		dateRange.set(range);
+	},
+
+	setReportCustomer(customer) {
+		reportCustomer.set(customer);
 	}
 };
