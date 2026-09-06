@@ -1,6 +1,7 @@
 <!-- customer detail -->
 <!-- src/routes/dashboard/customers/[id]/+page.svelte -->
 <script>
+	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
@@ -588,7 +589,7 @@
 
 	<!-- Customer Image Preview Modal -->
 	{#if showImageModal && selectedImage}
-		<div class="fixed inset-0 z-50 overflow-y-auto">
+		<div class="fixed inset-0 z-50 overflow-y-auto" use:lockBodyScroll>
 			<div class="flex min-h-screen items-center justify-center px-4 py-6">
 				<div
 					class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"

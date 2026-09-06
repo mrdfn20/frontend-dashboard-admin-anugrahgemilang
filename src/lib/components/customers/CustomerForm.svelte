@@ -1,5 +1,6 @@
 <!-- src/lib/components/customers/CustomerForm.svelte -->
 <script>
+	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
 	import { createEventDispatcher } from 'svelte';
 	import { customerActions } from '$lib/stores/customers.js';
 	import { validateCustomer, defaultCustomer, cleanCustomerData } from '$lib/models/customer.js';
@@ -94,7 +95,7 @@
 </script>
 
 <!-- Modal Overlay -->
-<div class="fixed inset-0 z-50 overflow-y-auto">
+<div class="fixed inset-0 z-50 overflow-y-auto" use:lockBodyScroll>
 	<div class="flex min-h-screen items-center justify-center px-4 py-6">
 		<!-- Background overlay -->
 		<div

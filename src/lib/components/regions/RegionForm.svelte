@@ -1,5 +1,6 @@
 <!-- src/lib/components/regions/RegionForm.svelte -->
 <script>
+	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
 	import { createEventDispatcher } from 'svelte';
 	import { regionActions } from '$lib/stores/regions.js';
 
@@ -41,7 +42,7 @@
 	}
 </script>
 
-<div class="fixed inset-0 z-50 overflow-y-auto">
+<div class="fixed inset-0 z-50 overflow-y-auto" use:lockBodyScroll>
 	<div class="flex min-h-screen items-center justify-center px-4 py-6">
 		<div
 			class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"

@@ -1,5 +1,6 @@
 <!-- src/lib/components/search/SearchOverlay.svelte -->
 <script>
+	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
 	import { goto } from '$app/navigation';
 	import { isOpen, query, results, isLoading, error, searchActions } from '$lib/stores/search.js';
 	import { transactionActions } from '$lib/stores/transactions.js';
@@ -39,7 +40,7 @@
 <svelte:window on:keydown={$isOpen ? handleKeydown : undefined} />
 
 {#if $isOpen}
-	<div class="fixed inset-0 z-50 overflow-y-auto">
+	<div class="fixed inset-0 z-50 overflow-y-auto" use:lockBodyScroll>
 		<div class="flex min-h-screen items-start justify-center px-4 pt-20 pb-6">
 			<div
 				class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
