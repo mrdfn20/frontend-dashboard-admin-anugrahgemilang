@@ -18,24 +18,16 @@
 	import { exportToCsv } from '$lib/utils/csv.js';
 	import { generateReportPdf } from '$lib/utils/pdf.js';
 	import { shareToWhatsApp, buildReportShareText } from '$lib/utils/whatsapp.js';
+	import Autosuggest from '$lib/components/ui/Autosuggest.svelte';
 
 	// ===== Autosuggest Pelanggan (pola sama kayak form Tambah Transaksi) =====
 	let customerQuery = '';
-	let showSuggestions = false;
-	let highlightedIndex = -1;
 
-	$: filteredSuggestions = (() => {
-		const q = customerQuery.trim().toLowerCase();
-		if (!q) return [];
-		return $customers
-			.filter((c) => String(c.id).includes(q) || (c.customer_name || '').toLowerCase().includes(q))
-			.slice(0, 20);
-	})();
-
-	$: filteredSuggestions, (highlightedIndex = -1);
+	function customerFilter(c, q) {
+		return String(c.id).includes(q) || (c.customer_name || '').toLowerCase().includes(q);
+	}
 
 	function handleCustomerInput() {
-		showSuggestions = true;
 		if ($reportCustomer && customerQuery !== $reportCustomer.customer_name) {
 			reportActions.setReportCustomer(null);
 		}
@@ -44,37 +36,11 @@
 	function selectCustomer(customer) {
 		reportActions.setReportCustomer(customer);
 		customerQuery = customer.customer_name;
-		showSuggestions = false;
-		highlightedIndex = -1;
 	}
 
 	function clearCustomer() {
 		reportActions.setReportCustomer(null);
 		customerQuery = '';
-	}
-
-	function handleCustomerBlur() {
-		setTimeout(() => (showSuggestions = false), 150);
-	}
-
-	// Navigasi panah atas/bawah + Enter buat pilih saran. Enter TANPA saran yang lagi
-	// disorot dibiarkan lolos ke <form> supaya langsung men-generate laporan.
-	function handleCustomerKeydown(event) {
-		if (!showSuggestions || filteredSuggestions.length === 0) return;
-
-		if (event.key === 'ArrowDown') {
-			event.preventDefault();
-			highlightedIndex = (highlightedIndex + 1) % filteredSuggestions.length;
-		} else if (event.key === 'ArrowUp') {
-			event.preventDefault();
-			highlightedIndex =
-				(highlightedIndex - 1 + filteredSuggestions.length) % filteredSuggestions.length;
-		} else if (event.key === 'Enter' && highlightedIndex >= 0) {
-			event.preventDefault();
-			selectCustomer(filteredSuggestions[highlightedIndex]);
-		} else if (event.key === 'Escape') {
-			showSuggestions = false;
-		}
 	}
 
 	onMount(async () => {
@@ -144,60 +110,27 @@
 		class="mb-6 rounded-lg bg-white p-4 shadow"
 	>
 		<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-			<div class="relative lg:col-span-2">
+			<div class="lg:col-span-2">
 				<label for="report-customer" class="mb-1 block text-xs font-medium text-gray-500">
 					Pelanggan (kosongkan = semua pelanggan)
 				</label>
-				<input
+				<Autosuggest
 					id="report-customer"
-					type="text"
-					autocomplete="off"
 					bind:value={customerQuery}
-					on:input={handleCustomerInput}
-					on:keydown={handleCustomerKeydown}
-					on:focus={() => (showSuggestions = true)}
-					on:blur={handleCustomerBlur}
+					items={$customers}
+					getLabel={(c) => c.customer_name}
+					getKey={(c) => c.id}
+					filterFn={customerFilter}
 					placeholder="Ketik ID atau nama pelanggan..."
-					class="focus:ring-maroon-500 focus:border-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none"
-				/>
-				{#if $reportCustomer}
-					<button
-						type="button"
-						on:click={clearCustomer}
-						class="absolute top-7 right-2 text-gray-400 hover:text-gray-600"
-						title="Batalkan pilihan pelanggan"
-					>
-						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M6 18L18 6M6 6l12 12"
-							/>
-						</svg>
-					</button>
-				{/if}
-				{#if showSuggestions && filteredSuggestions.length > 0}
-					<ul
-						class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
-					>
-						{#each filteredSuggestions as customer, i (customer.id)}
-							<li>
-								<button
-									type="button"
-									on:mousedown|preventDefault={() => selectCustomer(customer)}
-									on:mouseenter={() => (highlightedIndex = i)}
-									class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50 {i ===
-									highlightedIndex
-										? 'bg-gray-50'
-										: ''}"
-								>
-									<span class="text-gray-900">#{customer.id} - {customer.customer_name}</span>
-								</button>
-							</li>
-						{/each}
-					</ul>
-				{/if}
+					showClear
+					on:input={handleCustomerInput}
+					on:select={(e) => selectCustomer(e.detail)}
+					on:clear={clearCustomer}
+				>
+					<svelte:fragment slot="item" let:item>
+						<span class="text-gray-900">#{item.id} - {item.customer_name}</span>
+					</svelte:fragment>
+				</Autosuggest>
 			</div>
 			<div>
 				<label for="report-start-date" class="mb-1 block text-xs font-medium text-gray-500">

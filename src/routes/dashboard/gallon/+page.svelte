@@ -15,6 +15,7 @@
 	import GallonTable from '$lib/components/gallon/GallonTable.svelte';
 	import GallonMovementsTable from '$lib/components/gallon/GallonMovementsTable.svelte';
 	import { infiniteScroll } from '$lib/actions/infiniteScroll.js';
+	import Autosuggest from '$lib/components/ui/Autosuggest.svelte';
 
 	let activeTab = 'stock'; // 'stock' | 'movements'
 
@@ -174,13 +175,17 @@
 			<label for="movements-search" class="mb-1 block text-xs font-medium text-gray-500">
 				Cari Nama Pelanggan
 			</label>
-			<input
-				id="movements-search"
-				type="text"
-				bind:value={movementsQuery}
-				placeholder="Cari nama pelanggan..."
-				class="focus:ring-maroon-500 focus:border-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none md:w-96"
-			/>
+			<div class="md:w-96">
+				<Autosuggest
+					id="movements-search"
+					bind:value={movementsQuery}
+					items={$customers}
+					getLabel={(c) => c.customer_name}
+					getKey={(c) => c.id}
+					placeholder="Cari nama pelanggan..."
+					showClear
+				/>
+			</div>
 		</div>
 
 		{#if $movementsLoading && $movements.length === 0}

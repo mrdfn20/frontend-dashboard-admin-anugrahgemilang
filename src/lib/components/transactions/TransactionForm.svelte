@@ -6,6 +6,7 @@
 	import { api } from '$lib/services/api.js';
 	import { selectOnFocus } from '$lib/actions/selectOnFocus.js';
 	import CurrencyInput from '$lib/components/ui/CurrencyInput.svelte';
+	import Autosuggest from '$lib/components/ui/Autosuggest.svelte';
 
 	// Props
 	export let customers = [];
@@ -47,8 +48,6 @@
 	// ===== Autosuggest Pelanggan (ganti dropdown, biar gampang cari di data banyak) =====
 	let customerQuery = '';
 	let selectedCustomer = null;
-	let showSuggestions = false;
-	let highlightedIndex = -1;
 	let customerBalance = null;
 
 	const currencyFormatter = new Intl.NumberFormat('id-ID');
@@ -56,19 +55,11 @@
 		return `Rp ${currencyFormatter.format(Math.round(value || 0))}`;
 	}
 
-	$: filteredSuggestions = (() => {
-		const q = customerQuery.trim().toLowerCase();
-		if (!q) return [];
-		return customers
-			.filter((c) => String(c.id).includes(q) || (c.customer_name || '').toLowerCase().includes(q))
-			.slice(0, 20);
-	})();
-
-	// Reset highlight tiap kali daftar saran berubah, biar gak nyasar ke index lama
-	$: filteredSuggestions, (highlightedIndex = -1);
+	function customerFilter(c, q) {
+		return String(c.id).includes(q) || (c.customer_name || '').toLowerCase().includes(q);
+	}
 
 	function handleCustomerInput() {
-		showSuggestions = true;
 		// Kalau teks diubah manual setelah sebelumnya sudah pilih pelanggan, batalkan pilihan
 		// biar customer_id yang dikirim gak pernah nyasar ke pelanggan yang salah.
 		if (selectedCustomer && customerQuery !== selectedCustomer.customer_name) {
@@ -82,8 +73,6 @@
 		selectedCustomer = customer;
 		formData.customer_id = customer.id;
 		customerQuery = customer.customer_name;
-		showSuggestions = false;
-		highlightedIndex = -1;
 
 		customerBalance = null;
 		try {
@@ -92,32 +81,6 @@
 		} catch {
 			// 404 = belum pernah ada saldo, dianggap 0 - bukan error blocking
 			customerBalance = 0;
-		}
-	}
-
-	function handleCustomerBlur() {
-		// Delay dikit supaya klik di item suggestion sempat ketangkep dulu sebelum list ditutup
-		setTimeout(() => (showSuggestions = false), 150);
-	}
-
-	// Navigasi panah atas/bawah + Enter buat pilih saran tanpa mouse
-	function handleCustomerKeydown(event) {
-		if (!showSuggestions || filteredSuggestions.length === 0) return;
-
-		if (event.key === 'ArrowDown') {
-			event.preventDefault();
-			highlightedIndex = (highlightedIndex + 1) % filteredSuggestions.length;
-		} else if (event.key === 'ArrowUp') {
-			event.preventDefault();
-			highlightedIndex =
-				(highlightedIndex - 1 + filteredSuggestions.length) % filteredSuggestions.length;
-		} else if (event.key === 'Enter') {
-			if (highlightedIndex >= 0) {
-				event.preventDefault();
-				selectCustomer(filteredSuggestions[highlightedIndex]);
-			}
-		} else if (event.key === 'Escape') {
-			showSuggestions = false;
 		}
 	}
 
@@ -235,51 +198,29 @@
 							<label for="customer_search" class="block text-sm font-medium text-gray-700">
 								Pelanggan <span class="text-red-500">*</span>
 							</label>
-							<input
+							<Autosuggest
 								id="customer_search"
-								type="text"
-								autocomplete="off"
 								bind:value={customerQuery}
-								on:input={handleCustomerInput}
-								on:keydown={handleCustomerKeydown}
-								on:focus={() => (showSuggestions = true)}
-								on:blur={handleCustomerBlur}
+								items={customers}
+								getLabel={(c) => c.customer_name}
+								getKey={(c) => c.id}
+								filterFn={customerFilter}
 								placeholder="Ketik ID atau nama pelanggan..."
-								class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
-								class:border-red-300={errors.customer_id}
-							/>
-							{#if showSuggestions && filteredSuggestions.length > 0}
-								<ul
-									class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
-								>
-									{#each filteredSuggestions as customer, i (customer.id)}
-										<li>
-											<button
-												type="button"
-												on:mousedown|preventDefault={() => selectCustomer(customer)}
-												on:mouseenter={() => (highlightedIndex = i)}
-												class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50 {i ===
-												highlightedIndex
-													? 'bg-gray-50'
-													: ''}"
-											>
-												<span class="text-gray-900">
-													#{customer.id} - {customer.customer_name}
-												</span>
-												<span class="text-maroon-600 ml-2 shrink-0 font-medium">
-													{formatRp(customer.price)}/galon
-												</span>
-											</button>
-										</li>
-									{/each}
-								</ul>
-							{:else if showSuggestions && customerQuery.trim() && filteredSuggestions.length === 0}
-								<div
-									class="absolute z-10 mt-1 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-500 shadow-lg"
-								>
-									Tidak ada pelanggan yang cocok
-								</div>
-							{/if}
+								inputClass="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+								hasError={!!errors.customer_id}
+								noResultsText="Tidak ada pelanggan yang cocok"
+								on:input={handleCustomerInput}
+								on:select={(e) => selectCustomer(e.detail)}
+							>
+								<svelte:fragment slot="item" let:item>
+									<span class="text-gray-900">
+										#{item.id} - {item.customer_name}
+									</span>
+									<span class="text-maroon-600 ml-2 shrink-0 font-medium">
+										{formatRp(item.price)}/galon
+									</span>
+								</svelte:fragment>
+							</Autosuggest>
 							{#if selectedCustomer}
 								<p class="mt-1 text-xs text-gray-500">
 									Harga galon pelanggan ini: {formatRp(selectedCustomer.price)} · Saldo: {customerBalance ===

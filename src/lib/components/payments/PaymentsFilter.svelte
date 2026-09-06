@@ -1,6 +1,10 @@
 <!-- src/lib/components/payments/PaymentsFilter.svelte -->
 <script>
 	import { createEventDispatcher } from 'svelte';
+	import Autosuggest from '$lib/components/ui/Autosuggest.svelte';
+
+	// Props
+	export let customers = []; // dipakai buat autosuggest nama pelanggan
 
 	const dispatch = createEventDispatcher();
 
@@ -44,12 +48,14 @@
 			>
 				Nama Pelanggan
 			</label>
-			<input
+			<Autosuggest
 				id="payments-filter-customer-name"
-				type="text"
 				bind:value={customer_name}
+				items={customers}
+				getLabel={(c) => c.customer_name}
+				getKey={(c) => c.id}
 				placeholder="Cari nama pelanggan..."
-				class="focus:ring-maroon-500 focus:border-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none"
+				showClear
 			/>
 		</div>
 

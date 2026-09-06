@@ -2,7 +2,8 @@
 <script>
 	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
 	import { createEventDispatcher } from 'svelte';
-	import { regionActions, regions } from '$lib/stores/regions.js';
+	import { regionActions, regions, subRegions } from '$lib/stores/regions.js';
+	import Autosuggest from '$lib/components/ui/Autosuggest.svelte';
 
 	// Props
 	export let subRegion = null; // null = tambah, object = edit
@@ -96,13 +97,23 @@
 					<label for="sub-region-name" class="block text-sm font-medium text-gray-700">
 						Nama Sub-Wilayah <span class="text-red-500">*</span>
 					</label>
-					<input
+					<Autosuggest
 						id="sub-region-name"
-						type="text"
 						bind:value={sub_region_name}
+						items={$subRegions}
+						getLabel={(sr) => sr.sub_region_name}
+						getKey={(sr) => sr.id}
 						placeholder="mis. Perum Bumi Ciruas Permai 1"
-						class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
-					/>
+						inputClass="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+					>
+						<svelte:fragment slot="item" let:item>
+							<span class="text-gray-900">{item.sub_region_name}</span>
+							<span class="ml-2 shrink-0 text-xs text-gray-400">{item.region_name}</span>
+						</svelte:fragment>
+					</Autosuggest>
+					<p class="mt-1 text-xs text-gray-400">
+						Muncul saran kalau ada nama mirip yang sudah ada - buat cek biar gak dobel.
+					</p>
 				</div>
 
 				{#if errorMessage}

@@ -84,7 +84,11 @@
 		</div>
 	</div>
 
-	<PaymentsFilter on:filter={handleFilterChange} on:reset={handleFilterReset} />
+	<PaymentsFilter
+		customers={$customers}
+		on:filter={handleFilterChange}
+		on:reset={handleFilterReset}
+	/>
 
 	{#if $isLoading && $debts.length === 0}
 		<div class="flex h-64 items-center justify-center">

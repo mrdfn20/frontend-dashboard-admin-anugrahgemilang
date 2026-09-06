@@ -2,9 +2,10 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { selectOnFocus } from '$lib/actions/selectOnFocus.js';
+	import Autosuggest from '$lib/components/ui/Autosuggest.svelte';
 
 	// Props
-	export let customers = []; // dipakai utk menurunkan daftar sub-region tanpa call BE baru
+	export let customers = []; // dipakai utk menurunkan daftar sub-region tanpa call BE baru, & autosuggest nama
 
 	const dispatch = createEventDispatcher();
 
@@ -44,12 +45,14 @@
 			<label for="gallon-filter-customer-name" class="mb-1 block text-xs font-medium text-gray-500">
 				Nama Pelanggan
 			</label>
-			<input
+			<Autosuggest
 				id="gallon-filter-customer-name"
-				type="text"
 				bind:value={customer_name}
+				items={customers}
+				getLabel={(c) => c.customer_name}
+				getKey={(c) => c.id}
 				placeholder="Cari nama pelanggan..."
-				class="focus:ring-maroon-500 focus:border-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none"
+				showClear
 			/>
 		</div>
 

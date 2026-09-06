@@ -7,6 +7,7 @@
 	import { transactionHelpers } from '$lib/stores/transactions.js';
 
 	let inputEl;
+	let highlightedIndex = -1;
 
 	// Autofocus input begitu overlay dibuka
 	$: if ($isOpen && inputEl) {
@@ -15,10 +16,6 @@
 
 	function handleClose() {
 		searchActions.close();
-	}
-
-	function handleKeydown(event) {
-		if (event.key === 'Escape') handleClose();
 	}
 
 	function goToCustomer(customerId) {
@@ -35,6 +32,38 @@
 	$: hasQuery = $query.trim().length >= 2;
 	$: hasAnyResult =
 		$results.customers.length > 0 || $results.transactions.length > 0 || $results.debts.length > 0;
+
+	// Gabungkan 3 kelompok hasil jadi 1 daftar datar, biar bisa dinavigasi panah atas/bawah
+	// lintas kelompok (Pelanggan -> Transaksi -> Hutang) dengan urutan yang sama kayak tampilan.
+	$: flatResults = [
+		...$results.customers.map((c) => ({ run: () => goToCustomer(c.id) })),
+		...$results.transactions.map((t) => ({ run: () => goToCustomerTransactions(t.customer_name) })),
+		...$results.debts.map((d) => ({ run: () => goToCustomerTransactions(d.customer_name) }))
+	];
+	$: transactionsOffset = $results.customers.length;
+	$: debtsOffset = transactionsOffset + $results.transactions.length;
+
+	// Reset highlight tiap kali daftar hasil berubah, biar gak nyasar ke index lama
+	$: flatResults, (highlightedIndex = -1);
+
+	function handleKeydown(event) {
+		if (event.key === 'Escape') {
+			handleClose();
+			return;
+		}
+		if (!hasQuery || flatResults.length === 0) return;
+
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			highlightedIndex = (highlightedIndex + 1) % flatResults.length;
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			highlightedIndex = (highlightedIndex - 1 + flatResults.length) % flatResults.length;
+		} else if (event.key === 'Enter' && highlightedIndex >= 0) {
+			event.preventDefault();
+			flatResults[highlightedIndex].run();
+		}
+	}
 </script>
 
 <svelte:window on:keydown={$isOpen ? handleKeydown : undefined} />
@@ -120,11 +149,15 @@
 								<p class="mb-1 text-xs font-semibold tracking-wider text-gray-400 uppercase">
 									Pelanggan
 								</p>
-								{#each $results.customers as customer (customer.id)}
+								{#each $results.customers as customer, i (customer.id)}
 									<button
 										type="button"
 										on:click={() => goToCustomer(customer.id)}
-										class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left hover:bg-gray-50"
+										on:mouseenter={() => (highlightedIndex = i)}
+										class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left hover:bg-gray-50 {i ===
+										highlightedIndex
+											? 'bg-gray-50'
+											: ''}"
 									>
 										<div>
 											<p class="text-sm font-medium text-gray-900">
@@ -145,11 +178,16 @@
 								<p class="mb-1 text-xs font-semibold tracking-wider text-gray-400 uppercase">
 									Transaksi
 								</p>
-								{#each $results.transactions as tx (tx.id)}
+								{#each $results.transactions as tx, i (tx.id)}
 									<button
 										type="button"
 										on:click={() => goToCustomerTransactions(tx.customer_name)}
-										class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left hover:bg-gray-50"
+										on:mouseenter={() => (highlightedIndex = transactionsOffset + i)}
+										class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left hover:bg-gray-50 {transactionsOffset +
+											i ===
+										highlightedIndex
+											? 'bg-gray-50'
+											: ''}"
 									>
 										<div>
 											<p class="text-sm font-medium text-gray-900">
@@ -173,11 +211,16 @@
 								<p class="mb-1 text-xs font-semibold tracking-wider text-gray-400 uppercase">
 									Hutang
 								</p>
-								{#each $results.debts as debt (debt.transaction_id)}
+								{#each $results.debts as debt, i (debt.transaction_id)}
 									<button
 										type="button"
 										on:click={() => goToCustomerTransactions(debt.customer_name)}
-										class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left hover:bg-gray-50"
+										on:mouseenter={() => (highlightedIndex = debtsOffset + i)}
+										class="flex w-full items-center justify-between rounded-md px-2 py-2 text-left hover:bg-gray-50 {debtsOffset +
+											i ===
+										highlightedIndex
+											? 'bg-gray-50'
+											: ''}"
 									>
 										<div>
 											<p class="text-sm font-medium text-gray-900">{debt.customer_name}</p>

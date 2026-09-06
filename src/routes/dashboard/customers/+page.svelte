@@ -23,7 +23,12 @@
 	import { api } from '$lib/services/api.js';
 	import CustomerForm from '$lib/components/customers/CustomerForm.svelte';
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
+	import Autosuggest from '$lib/components/ui/Autosuggest.svelte';
 	import { infiniteScroll } from '$lib/actions/infiniteScroll.js';
+
+	function selectSearchSuggestion(customer) {
+		searchTerm.set(customer.customer_name);
+	}
 
 	let regionOptions = [];
 	let subRegionOptions = [];
@@ -257,12 +262,23 @@
 	<!-- Search -->
 	<div class="mb-4">
 		<div class="relative">
-			<input
-				type="text"
-				placeholder="Cari pelanggan berdasarkan apapun... (gunakan /123 untuk cari ID spesifik)"
+			<Autosuggest
 				bind:value={$searchTerm}
-				class="focus:border-maroon-500 focus:ring-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 pl-10 text-sm"
-			/>
+				items={$customers}
+				getLabel={(c) => c.customer_name}
+				getKey={(c) => c.id}
+				placeholder="Cari pelanggan berdasarkan apapun... (gunakan /123 untuk cari ID spesifik)"
+				inputClass="focus:border-maroon-500 focus:ring-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 pl-10 pr-9 text-sm"
+				on:select={(e) => selectSearchSuggestion(e.detail)}
+			>
+				<svelte:fragment slot="item" let:item>
+					<span class="text-gray-900">
+						{item.title}
+						{item.customer_name}
+					</span>
+					<span class="ml-2 shrink-0 text-xs text-gray-400">#{item.id}</span>
+				</svelte:fragment>
+			</Autosuggest>
 			<svg
 				class="absolute top-2.5 left-3 h-4 w-4 text-gray-400"
 				xmlns="http://www.w3.org/2000/svg"

@@ -16,11 +16,15 @@
 				},
 				{
 					q: 'Cara cari pelanggan',
-					a: 'Ketik apa aja di kotak pencarian (nama, alamat, no WA) - hasilnya langsung nyaring. Kalau tahu ID persis, ketik "/" diikuti angkanya, misal "/123".'
+					a: 'Ketik apa aja di kotak pencarian (nama, alamat, no WA) - hasilnya langsung nyaring. Kalau tahu ID persis, ketik "/" diikuti angkanya, misal "/123". Sambil ngetik nama, muncul juga saran nama pelanggan yang cocok di bawah kotak pencarian - bisa dipilih pakai mouse atau panah atas/bawah + Enter.'
 				},
 				{
 					q: 'Cara pakai filter (Tipe, Harga Galon, Hutang, Kecamatan, Sub-Wilayah)',
 					a: 'Ada beberapa dropdown filter di atas tabel Pelanggan. Bisa dipakai bareng-bareng (misal: Tipe = Rumah DAN ada Hutang). Klik "Reset filter" buat balikin semua ke normal.'
+				},
+				{
+					q: 'Kenapa pas ngetik nama pelanggan suka muncul kotak saran di bawahnya?',
+					a: 'Itu autosuggest - fitur ini ada di hampir semua kotak "Nama Pelanggan" di seluruh dashboard (filter Transaksi/Hutang/Galon, form Tambah Transaksi, Laporan, pencarian global Ctrl+K, dll). Ketik sebagian nama, pilih dari saran yang muncul (klik atau panah atas/bawah + Enter) biar gak salah ketik / gak perlu ketik nama lengkap.'
 				},
 				{
 					q: 'Kartu "Aktif Transaksi Bulan Ini" & "Tidak Aktif Bulan Ini" itu apa?',

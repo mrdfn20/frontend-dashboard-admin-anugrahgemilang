@@ -16,6 +16,7 @@ SvelteKit admin dashboard for CV Anugrah Gemilang's water-gallon delivery busine
 - 🔍 Global search overlay (`Ctrl+K`)
 - Currency inputs with thousand-separator formatting and select-on-focus; infinite-scroll lists (server-side paginated for Transaksi/Audit Log/Hutang, the datasets that grow without bound)
 - Every filter bar (Transaksi, Hutang, Galon, Laporan) is a real `<form>` — pressing Enter in any field applies it, not just clicking the button
+- Every "nama pelanggan" field app-wide (Pelanggan search, Transaksi/Hutang/Galon filters, Galon riwayat pergerakan search, Tambah Transaksi picker, Laporan statement picker, Tambah Sub-Wilayah name field) is a type-ahead autosuggest — dropdown of matches as you type, navigable with `↑`/`↓`/`Enter`/`Esc` (shared `Autosuggest` component, `src/lib/components/ui/Autosuggest.svelte`). The global search overlay (`Ctrl+K`) has the same arrow-key navigation across its Pelanggan/Transaksi/Hutang result groups. Fields for naming a brand-new entity (Kelola Armada, Kelola Wilayah's Kecamatan name, User Management) intentionally have no autosuggest — there's nothing existing to suggest when you're creating something new
 
 ## Technology Stack
 
@@ -115,3 +116,4 @@ pm2 logs cv-anugrah-frontend       # tail logs
 - Money inputs use the shared `CurrencyInput` component (`src/lib/components/ui/CurrencyInput.svelte`); plain numeric inputs use the `selectOnFocus` action so a click lets you type over the value immediately instead of having to delete it first.
 - Terminology: the gallon column that used to be labeled "Kembali" is always **"Retur"** now (`gallon_returned`) — don't reintroduce "Kembali" for it, that word is reserved for navigation/undo copy (the Back button, "Kembalikan" for restoring a soft-deleted record).
 - Filter bars with an explicit "Terapkan Filter" button are wrapped in a real `<form on:submit|preventDefault={applyFilters}>` with the button as `type="submit"`, so Enter submits from any field — don't wire filters with a bare `<div>` + `on:click` only.
+- Any text field that references an existing named entity (customer, sub-region, ...) uses `$lib/components/ui/Autosuggest.svelte` instead of a plain `<input>` — pass `items`/`getLabel`/`getKey`, handle `on:select` to act on the picked item (the component doesn't assume label === bound value, so the parent sets `value` itself in the handler). Don't hand-roll another `highlightedIndex` + keyboard-nav dropdown; extend the shared component instead.
