@@ -5,7 +5,7 @@ SvelteKit admin dashboard for CV Anugrah Gemilang's water-gallon delivery busine
 ## Features
 
 - 🔐 Login with JWT (access + refresh token, auto-refresh on expiry)
-- 👥 **Pelanggan** — customer CRUD (soft-delete with a "Pelanggan Terhapus" restore page), Google-Drive-hosted photo, search, filters (customer type, gallon price, debt status, region/sub-region), "active/inactive this month" cards (click to filter the list), balance + outstanding-debt columns, Admin-only balance correction (hard set, distinct from the additive "Tambah Saldo")
+- 👥 **Pelanggan** — customer CRUD (soft-delete with a "Pelanggan Terhapus" restore page), Google-Drive-hosted photo, search, filters (customer type, gallon price, debt status, region/sub-region), "active/inactive this month" cards (click to filter the list), balance + outstanding-debt columns, Admin-only balance correction (hard set, distinct from the additive "Tambah Saldo"). Customer detail page shows the resolved region/sub-region name, a Google Maps link (falls back to an address-text search when exact coordinates aren't set), and a per-customer transaction/debt history table (pay off debts inline from there too)
 - 💰 **Transaksi** — create Tunai/Hutang transactions via type-ahead customer picker (keyboard-navigable with arrow keys/Enter), live "estimated total", customer balance shown inline, and Tunai/Hutang guidance as you type the paid amount; restore soft-deleted transactions; pay off debts inline (overpayment allowed, credited to balance, backdatable payment date up to today); transaction status/remaining debt is always computed live from `payment_logs`, never from a stale creation-time snapshot
 - 🚰 **Galon** — current unreturned-gallon stock per customer, plus a global movement history tab with running balance
 - 🧾 **Hutang** — cross-customer debt list with status/date/name filters, pay directly from the list
@@ -15,6 +15,7 @@ SvelteKit admin dashboard for CV Anugrah Gemilang's water-gallon delivery busine
 - 👤 **User Management** & **Audit Log** (Admin only)
 - 🔍 Global search overlay (`Ctrl+K`)
 - Currency inputs with thousand-separator formatting and select-on-focus; infinite-scroll lists (server-side paginated for Transaksi/Audit Log/Hutang, the datasets that grow without bound)
+- Every filter bar (Transaksi, Hutang, Galon, Laporan) is a real `<form>` — pressing Enter in any field applies it, not just clicking the button
 
 ## Technology Stack
 
@@ -112,3 +113,5 @@ pm2 logs cv-anugrah-frontend       # tail logs
 
 - Modal backdrop across the app: `fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300` (frosted glass, not a solid dark overlay). Every modal's outer `fixed inset-0 z-50` wrapper also carries `use:lockBodyScroll` (`src/lib/actions/lockBodyScroll.js`) so the page behind it can't be scrolled while it's open.
 - Money inputs use the shared `CurrencyInput` component (`src/lib/components/ui/CurrencyInput.svelte`); plain numeric inputs use the `selectOnFocus` action so a click lets you type over the value immediately instead of having to delete it first.
+- Terminology: the gallon column that used to be labeled "Kembali" is always **"Retur"** now (`gallon_returned`) — don't reintroduce "Kembali" for it, that word is reserved for navigation/undo copy (the Back button, "Kembalikan" for restoring a soft-deleted record).
+- Filter bars with an explicit "Terapkan Filter" button are wrapped in a real `<form on:submit|preventDefault={applyFilters}>` with the button as `type="submit"`, so Enter submits from any field — don't wire filters with a bare `<div>` + `on:click` only.

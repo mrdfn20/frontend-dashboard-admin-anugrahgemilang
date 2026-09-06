@@ -33,6 +33,10 @@
 				{
 					q: 'Cara koreksi saldo pelanggan (kalau salah input)',
 					a: 'Buka detail pelanggan → tombol "Koreksi Saldo" (khusus Admin). Beda dari "+ Tambah Saldo" (yang cuma NAMBAH), "Koreksi Saldo" langsung MENIMPA ke angka yang kamu masukkan - bisa juga diisi 0 buat ngosongin saldo.'
+				},
+				{
+					q: 'Cara lihat riwayat transaksi/hutang 1 pelanggan tertentu',
+					a: 'Buka detail pelanggan tersebut - ada tabel "Riwayat Transaksi" di bagian bawah, isinya semua transaksi pelanggan itu beserta status Lunas/Belum Lunas, lengkap dengan tombol Bayar buat yang masih hutang. Cara cepat lain: dari halaman Transaksi, klik nama pelanggan di baris manapun - otomatis masuk ke detail pelanggan itu.'
 				}
 			]
 		},
