@@ -20,6 +20,7 @@
 	// ===== Autosuggest Pelanggan (pola sama kayak form Tambah Transaksi) =====
 	let customerQuery = '';
 	let showSuggestions = false;
+	let highlightedIndex = -1;
 
 	$: filteredSuggestions = (() => {
 		const q = customerQuery.trim().toLowerCase();
@@ -28,6 +29,8 @@
 			.filter((c) => String(c.id).includes(q) || (c.customer_name || '').toLowerCase().includes(q))
 			.slice(0, 20);
 	})();
+
+	$: filteredSuggestions, (highlightedIndex = -1);
 
 	function handleCustomerInput() {
 		showSuggestions = true;
@@ -40,6 +43,7 @@
 		reportActions.setReportCustomer(customer);
 		customerQuery = customer.customer_name;
 		showSuggestions = false;
+		highlightedIndex = -1;
 	}
 
 	function clearCustomer() {
@@ -49,6 +53,26 @@
 
 	function handleCustomerBlur() {
 		setTimeout(() => (showSuggestions = false), 150);
+	}
+
+	// Navigasi panah atas/bawah + Enter buat pilih saran. Enter TANPA saran yang lagi
+	// disorot dibiarkan lolos ke <form> supaya langsung men-generate laporan.
+	function handleCustomerKeydown(event) {
+		if (!showSuggestions || filteredSuggestions.length === 0) return;
+
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			highlightedIndex = (highlightedIndex + 1) % filteredSuggestions.length;
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			highlightedIndex =
+				(highlightedIndex - 1 + filteredSuggestions.length) % filteredSuggestions.length;
+		} else if (event.key === 'Enter' && highlightedIndex >= 0) {
+			event.preventDefault();
+			selectCustomer(filteredSuggestions[highlightedIndex]);
+		} else if (event.key === 'Escape') {
+			showSuggestions = false;
+		}
 	}
 
 	onMount(async () => {
@@ -69,7 +93,7 @@
 			{ key: 'transaction_type', label: 'Jenis' },
 			{ key: 'gallon_filled', label: 'Galon Isi' },
 			{ key: 'gallon_empty', label: 'Galon Kosong' },
-			{ key: 'gallon_returned', label: 'Galon Kembali' },
+			{ key: 'gallon_returned', label: 'Galon Retur' },
 			{ key: 'total_price', label: 'Total' },
 			{ key: 'payment_amount', label: 'Dibayar' }
 		];
@@ -93,7 +117,10 @@
 	</div>
 
 	<!-- Date range + pelanggan picker -->
-	<div class="mb-6 rounded-lg bg-white p-4 shadow">
+	<form
+		on:submit|preventDefault={() => reportActions.generateReport()}
+		class="mb-6 rounded-lg bg-white p-4 shadow"
+	>
 		<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
 			<div class="relative lg:col-span-2">
 				<label for="report-customer" class="mb-1 block text-xs font-medium text-gray-500">
@@ -105,6 +132,7 @@
 					autocomplete="off"
 					bind:value={customerQuery}
 					on:input={handleCustomerInput}
+					on:keydown={handleCustomerKeydown}
 					on:focus={() => (showSuggestions = true)}
 					on:blur={handleCustomerBlur}
 					placeholder="Ketik ID atau nama pelanggan..."
@@ -131,12 +159,16 @@
 					<ul
 						class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg"
 					>
-						{#each filteredSuggestions as customer (customer.id)}
+						{#each filteredSuggestions as customer, i (customer.id)}
 							<li>
 								<button
 									type="button"
-									on:click={() => selectCustomer(customer)}
-									class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50"
+									on:mousedown|preventDefault={() => selectCustomer(customer)}
+									on:mouseenter={() => (highlightedIndex = i)}
+									class="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-gray-50 {i ===
+									highlightedIndex
+										? 'bg-gray-50'
+										: ''}"
 								>
 									<span class="text-gray-900">#{customer.id} - {customer.customer_name}</span>
 								</button>
@@ -169,8 +201,7 @@
 			</div>
 			<div class="flex items-end gap-2">
 				<button
-					type="button"
-					on:click={() => reportActions.generateReport()}
+					type="submit"
 					disabled={$isLoading}
 					class="bg-maroon-600 hover:bg-maroon-700 w-full rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm disabled:opacity-50"
 				>
@@ -187,7 +218,7 @@
 				</button>
 			</div>
 		</div>
-	</div>
+	</form>
 
 	{#if $isLoading && !$hasGenerated}
 		<div class="flex h-64 items-center justify-center">

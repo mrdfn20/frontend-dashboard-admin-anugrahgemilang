@@ -38,7 +38,7 @@
 	}
 </script>
 
-<div class="mb-4 rounded-lg bg-white p-4 shadow">
+<form on:submit|preventDefault={applyFilters} class="mb-4 rounded-lg bg-white p-4 shadow">
 	<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
 		<div class="lg:col-span-2">
 			<label for="gallon-filter-customer-name" class="mb-1 block text-xs font-medium text-gray-500">
@@ -71,7 +71,7 @@
 
 		<div>
 			<label for="gallon-filter-stock-limit" class="mb-1 block text-xs font-medium text-gray-500">
-				Min. Galon Belum Kembali
+				Min. Galon Belum Retur
 			</label>
 			<input
 				id="gallon-filter-stock-limit"
@@ -95,7 +95,7 @@
 					class="focus:ring-maroon-500 focus:border-maroon-500 block w-full rounded-md border border-gray-300 px-2 py-2 text-sm shadow-sm focus:outline-none"
 				>
 					<option value="customer_name">Nama</option>
-					<option value="unreturned_gallons">Galon Belum Kembali</option>
+					<option value="unreturned_gallons">Galon Belum Retur</option>
 					<option value="sub_region_name">Sub Wilayah</option>
 				</select>
 				<button
@@ -119,11 +119,10 @@
 			Reset
 		</button>
 		<button
-			type="button"
-			on:click={applyFilters}
+			type="submit"
 			class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-4 py-2 text-sm font-medium text-white shadow-sm"
 		>
 			Terapkan Filter
 		</button>
 	</div>
-</div>
+</form>

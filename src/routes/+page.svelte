@@ -78,7 +78,7 @@
 		<div class="w-full max-w-md">
 			<div class="mb-10 text-center">
 				<h1 class="mb-2 text-3xl font-bold text-gray-900">CV. Anugrah Gemilang</h1>
-				<p class="text-gray-600">Internal System</p>
+				<p class="text-gray-600">Sistem Pintar CV. Anugrah Gemilang</p>
 			</div>
 
 			<div class="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">

@@ -12,6 +12,8 @@
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
 	import AddBalanceModal from '$lib/components/customers/AddBalanceModal.svelte';
 	import EditBalanceModal from '$lib/components/customers/EditBalanceModal.svelte';
+	import PayDebtModal from '$lib/components/transactions/PayDebtModal.svelte';
+	import { transactionHelpers } from '$lib/stores/transactions.js';
 
 	// Get customer ID from URL params
 	$: customerId = $page.params.id;
@@ -29,6 +31,40 @@
 	let gallonStock = null;
 	let gallonMovements = [];
 	let isLoadingExtras = true;
+
+	// Riwayat transaksi/hutang pelanggan ini
+	let customerTransactions = [];
+	let isLoadingTransactions = true;
+	let showPayDebtModal = false;
+	let selectedTransaction = null;
+
+	async function loadCustomerTransactions() {
+		isLoadingTransactions = true;
+		try {
+			const data = await api.transactions.getByFilter({
+				customer_id: customerId,
+				sortBy: 'transaction_date',
+				sortOrder: 'DESC'
+			});
+			customerTransactions = Array.isArray(data) ? data : [];
+		} catch (err) {
+			console.error('Failed to load customer transactions:', err);
+			customerTransactions = [];
+		} finally {
+			isLoadingTransactions = false;
+		}
+	}
+
+	function handlePayDebt(transaction) {
+		selectedTransaction = transaction;
+		showPayDebtModal = true;
+	}
+
+	function handlePayDebtSuccess() {
+		showPayDebtModal = false;
+		selectedTransaction = null;
+		loadCustomerTransactions();
+	}
 
 	async function loadBalance() {
 		try {
@@ -78,7 +114,7 @@
 		if (customerId) {
 			await customerActions.loadCustomer(parseInt(customerId));
 			isLoadingExtras = true;
-			await Promise.all([loadBalance(), loadGallonInfo()]);
+			await Promise.all([loadBalance(), loadGallonInfo(), loadCustomerTransactions()]);
 			isLoadingExtras = false;
 		}
 	});
@@ -413,10 +449,20 @@
 								</dd>
 							</div>
 
-							{#if $selectedCustomer.sub_region_id}
+							{#if $selectedCustomer.sub_region_name || $selectedCustomer.region_name}
 								<div>
-									<dt class="text-sm font-medium text-gray-500">Sub Region</dt>
-									<dd class="mt-1 text-sm text-gray-900">ID: {$selectedCustomer.sub_region_id}</dd>
+									<dt class="text-sm font-medium text-gray-500">Wilayah</dt>
+									<dd class="mt-1 text-sm text-gray-900">
+										{$selectedCustomer.sub_region_name || '-'}
+										{#if $selectedCustomer.region_name}
+											<span class="text-gray-500">· {$selectedCustomer.region_name}</span>
+										{/if}
+									</dd>
+								</div>
+							{:else}
+								<div>
+									<dt class="text-sm font-medium text-gray-500">Wilayah</dt>
+									<dd class="mt-1 text-sm text-gray-400">Belum dikategorikan</dd>
 								</div>
 							{/if}
 						</dl>
@@ -424,13 +470,13 @@
 				</div>
 
 				<!-- Location Info -->
-				{#if $selectedCustomer.latitude && $selectedCustomer.longitude}
-					<div class="rounded-lg bg-white shadow">
-						<div class="px-6 py-4">
-							<h3 class="text-lg font-medium text-gray-900">Lokasi</h3>
-						</div>
-						<div class="border-t border-gray-200 px-6 py-4">
-							<dl class="space-y-4">
+				<div class="rounded-lg bg-white shadow">
+					<div class="px-6 py-4">
+						<h3 class="text-lg font-medium text-gray-900">Lokasi</h3>
+					</div>
+					<div class="border-t border-gray-200 px-6 py-4">
+						<dl class="space-y-4">
+							{#if $selectedCustomer.latitude && $selectedCustomer.longitude}
 								<div>
 									<dt class="text-sm font-medium text-gray-500">Koordinat</dt>
 									<dd class="mt-1 text-sm text-gray-900">
@@ -460,10 +506,41 @@
 										Lihat di Maps
 									</a>
 								</div>
-							</dl>
-						</div>
+							{:else if $selectedCustomer.address}
+								<div>
+									<p class="mb-2 text-xs text-gray-500">
+										Koordinat belum diisi - cari perkiraan lokasi dari alamat:
+									</p>
+									<a
+										href="https://www.google.com/maps/search/?api=1&query={encodeURIComponent(
+											$selectedCustomer.address
+										)}"
+										target="_blank"
+										class="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+									>
+										<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+											/>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+											/>
+										</svg>
+										Cari alamat di Maps
+									</a>
+								</div>
+							{:else}
+								<p class="text-sm text-gray-400">Alamat belum diisi.</p>
+							{/if}
+						</dl>
 					</div>
-				{/if}
+				</div>
 			</div>
 		</div>
 
@@ -512,7 +589,7 @@
 						<p class="text-sm text-gray-400">Memuat data galon...</p>
 					{:else}
 						<div class="mb-4">
-							<p class="text-sm text-gray-500">Galon Belum Kembali</p>
+							<p class="text-sm text-gray-500">Galon Belum Retur</p>
 							<p
 								class="text-2xl font-semibold {(gallonStock?.unreturned_gallons || 0) > 0
 									? 'text-yellow-700'
@@ -532,7 +609,7 @@
 										<tr>
 											<th class="px-3 py-2 text-left font-medium text-gray-500">Tanggal</th>
 											<th class="px-3 py-2 text-right font-medium text-gray-500"
-												>Isi/Kosong/Kembali</th
+												>Isi/Kosong/Retur</th
 											>
 											<th class="px-3 py-2 text-right font-medium text-gray-500">Saldo Galon</th>
 										</tr>
@@ -563,6 +640,69 @@
 						{/if}
 					{/if}
 				</div>
+			</div>
+		</div>
+
+		<!-- Riwayat Transaksi & Hutang Pelanggan Ini -->
+		<div class="mt-6 rounded-lg bg-white shadow">
+			<div class="px-6 py-4">
+				<h3 class="text-lg font-medium text-gray-900">Riwayat Transaksi</h3>
+			</div>
+			<div class="border-t border-gray-200">
+				{#if isLoadingTransactions}
+					<p class="px-6 py-4 text-sm text-gray-400">Memuat riwayat transaksi...</p>
+				{:else if customerTransactions.length === 0}
+					<p class="px-6 py-4 text-sm text-gray-400">Belum ada transaksi.</p>
+				{:else}
+					<div class="overflow-x-auto">
+						<table class="min-w-full divide-y divide-gray-200 text-sm">
+							<thead class="bg-gray-50">
+								<tr>
+									<th class="px-4 py-2 text-left font-medium text-gray-500">Tanggal</th>
+									<th class="px-4 py-2 text-right font-medium text-gray-500">Total</th>
+									<th class="px-4 py-2 text-center font-medium text-gray-500">Status</th>
+									<th class="px-4 py-2 text-right font-medium text-gray-500">Aksi</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-gray-100">
+								{#each customerTransactions as tx (tx.id)}
+									{@const remaining =
+										tx.remaining_debt !== undefined && tx.remaining_debt !== null
+											? Number(tx.remaining_debt)
+											: 0}
+									<tr class="hover:bg-gray-50">
+										<td class="px-4 py-2 whitespace-nowrap text-gray-700">
+											{transactionHelpers.formatDate(tx.transaction_date)}
+										</td>
+										<td class="px-4 py-2 text-right whitespace-nowrap text-gray-900">
+											{transactionHelpers.formatCurrency(tx.total_price)}
+										</td>
+										<td class="px-4 py-2 text-center whitespace-nowrap">
+											<span
+												class="rounded-full px-2 py-1 text-xs font-medium {transactionHelpers.getStatusClass(
+													tx.transaction_type,
+													remaining
+												)}"
+											>
+												{transactionHelpers.getStatusLabel(tx.transaction_type, remaining)}
+											</span>
+										</td>
+										<td class="px-4 py-2 text-right whitespace-nowrap">
+											{#if tx.transaction_type === 'Hutang' && remaining > 0}
+												<button
+													on:click={() => handlePayDebt(tx)}
+													class="text-maroon-600 hover:text-maroon-800 font-medium"
+												>
+													Bayar
+												</button>
+											{/if}
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				{/if}
 			</div>
 		</div>
 	{:else}
@@ -665,6 +805,15 @@
 		currentBalance={customerBalance}
 		on:success={handleEditBalanceSuccess}
 		on:cancel={() => (showEditBalanceModal = false)}
+	/>
+{/if}
+
+{#if showPayDebtModal && selectedTransaction && $selectedCustomer}
+	<PayDebtModal
+		transaction={selectedTransaction}
+		customerName={`${$selectedCustomer.title || ''} ${$selectedCustomer.customer_name}`}
+		on:success={handlePayDebtSuccess}
+		on:cancel={() => (showPayDebtModal = false)}
 	/>
 {/if}
 

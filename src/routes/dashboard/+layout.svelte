@@ -196,7 +196,7 @@
 	{#if !$sidebar.isLoading}
 		<div
 			bind:this={sidebarElement}
-			class="bg-maroon-600 ease-spring fixed inset-y-0 left-0 z-50 w-64 transform text-white transition-all duration-500 will-change-transform
+			class="bg-maroon-600 ease-spring fixed inset-y-0 left-0 z-50 flex w-64 transform flex-col text-white transition-all duration-500 will-change-transform
 			{$sidebar.isOpen ? 'translate-x-0 scale-100 opacity-100' : '-translate-x-full scale-95 opacity-0'}
 			{$sidebar.isAnimating ? 'pointer-events-none' : ''}"
 			role="navigation"
@@ -215,7 +215,7 @@
 
 			<!-- Header -->
 			<div
-				class="border-maroon-700 relative flex h-16 items-center justify-center overflow-hidden border-b"
+				class="border-maroon-700 relative flex h-16 flex-shrink-0 items-center justify-center overflow-hidden border-b"
 			>
 				<!-- 🆕 Subtle animated background -->
 				<div
@@ -231,7 +231,9 @@
 			</div>
 
 			<!-- Navigation Menu -->
-			<nav class="mt-5 space-y-1 px-2" role="list">
+			<!-- pb-24 - kasih ruang di bawah biar item menu terakhir gak ketutupan sama kotak
+			     Shortcuts yang posisinya absolute di bawah sidebar -->
+			<nav class="mt-5 flex-1 space-y-1 overflow-y-auto px-2 pb-24" role="list">
 				<!-- Dashboard -->
 				<a
 					href="/dashboard"

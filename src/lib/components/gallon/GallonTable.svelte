@@ -45,7 +45,7 @@
 					</th>
 					<th class="px-4 py-3 text-left">
 						<SortableHeader column="unreturned_gallons" {sortState} {toggleSort}
-							>Galon Belum Kembali</SortableHeader
+							>Galon Belum Retur</SortableHeader
 						>
 					</th>
 				</tr>

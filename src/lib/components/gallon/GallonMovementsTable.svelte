@@ -38,7 +38,7 @@
 					<th
 						class="px-4 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
 					>
-						Isi / Kosong / Kembali
+						Isi / Kosong / Retur
 					</th>
 					<th
 						class="px-4 py-3 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"

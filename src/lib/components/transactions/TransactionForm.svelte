@@ -331,10 +331,10 @@
 							{/if}
 						</div>
 
-						<!-- Galon Kembali -->
+						<!-- Galon Retur -->
 						<div>
 							<label for="gallon_returned" class="block text-sm font-medium text-gray-700">
-								Galon Kembali/Retur <span class="text-red-500">*</span>
+								Galon Retur <span class="text-red-500">*</span>
 							</label>
 							<input
 								id="gallon_returned"

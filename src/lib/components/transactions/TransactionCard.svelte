@@ -28,7 +28,12 @@
 		<div class="rounded-lg bg-white p-4 shadow">
 			<div class="flex items-start justify-between">
 				<div>
-					<p class="font-medium text-gray-900">{getCustomerName(transaction.customer_id)}</p>
+					<a
+						href="/dashboard/customers/{transaction.customer_id}"
+						class="hover:text-maroon-600 font-medium text-gray-900 hover:underline"
+					>
+						{getCustomerName(transaction.customer_id)}
+					</a>
 					<p class="text-xs text-gray-500">
 						{transactionHelpers.formatDate(transaction.transaction_date)}
 					</p>
@@ -45,7 +50,7 @@
 
 			<div class="mt-3 grid grid-cols-2 gap-2 text-sm">
 				<div>
-					<p class="text-xs text-gray-500">Galon (Isi/Kosong/Kembali)</p>
+					<p class="text-xs text-gray-500">Galon (Isi/Kosong/Retur)</p>
 					<p class="text-gray-800">
 						{transaction.gallon_filled} / {transaction.gallon_empty} / {transaction.gallon_returned}
 					</p>

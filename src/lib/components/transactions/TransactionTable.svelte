@@ -65,7 +65,7 @@
 					<th
 						class="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 					>
-						Galon (Isi/Kosong/Kembali)
+						Galon (Isi/Kosong/Retur)
 					</th>
 					<th class="px-4 py-3 text-left">
 						<SortableHeader column="total_price" {sortState} {toggleSort}>Total</SortableHeader>
@@ -97,7 +97,12 @@
 							{transactionHelpers.formatDate(transaction.transaction_date)}
 						</td>
 						<td class="px-4 py-3 text-sm font-medium whitespace-nowrap text-gray-900">
-							{getCustomerName(transaction.customer_id)}
+							<a
+								href="/dashboard/customers/{transaction.customer_id}"
+								class="hover:text-maroon-600 hover:underline"
+							>
+								{getCustomerName(transaction.customer_id)}
+							</a>
 						</td>
 						<td class="px-4 py-3 text-sm whitespace-nowrap">
 							<span
