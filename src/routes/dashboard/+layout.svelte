@@ -137,6 +137,7 @@
 		if (isActiveRoute('/dashboard/users')) return 'Manajemen User';
 		if (isActiveRoute('/dashboard/audit-logs')) return 'Audit Log';
 		if (isActiveRoute('/dashboard/armada')) return 'Kelola Armada';
+		if (isActiveRoute('/dashboard/regions')) return 'Kelola Wilayah';
 		if (isActiveRoute('/dashboard/payments')) return 'Manajemen Pembayaran';
 		if (isActiveRoute('/dashboard/reports')) return 'Laporan';
 		if ($page.url.pathname === '/dashboard') return 'Dashboard';
@@ -473,6 +474,43 @@
 							/>
 						</svg>
 						<span class="transition-all duration-200 group-hover:translate-x-1">Kelola Armada</span>
+					</a>
+
+					<!-- Kelola Wilayah (Admin only) -->
+					<a
+						href="/dashboard/regions"
+						on:click={handleMenuClick}
+						class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+							   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+							   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+							   {isActiveRoute('/dashboard/regions')
+							? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+							: ''}"
+						role="listitem"
+						aria-current={isActiveRoute('/dashboard/regions') ? 'page' : undefined}
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+							/>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+							/>
+						</svg>
+						<span class="transition-all duration-200 group-hover:translate-x-1">Kelola Wilayah</span
+						>
 					</a>
 				{/if}
 

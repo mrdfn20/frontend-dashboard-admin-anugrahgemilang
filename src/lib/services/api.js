@@ -240,10 +240,18 @@ const api = {
 		getActivitySummary: () => api.get('/customers/activity-summary')
 	},
 
-	// Region & sub-region (read-only, buat dropdown filter/form)
+	// Region & sub-region - GET dibaca semua role (dropdown filter/form),
+	// create/update/delete Admin only
 	regions: {
 		getAll: () => api.get('/regions'),
-		getSubRegions: () => api.get('/regions/sub-regions')
+		create: (data) => api.post('/regions', data),
+		update: (id, data) => api.put(`/regions/${id}`, data),
+		delete: (id) => api.delete(`/regions/${id}`),
+
+		getSubRegions: () => api.get('/regions/sub-regions'),
+		createSubRegion: (data) => api.post('/regions/sub-regions', data),
+		updateSubRegion: (id, data) => api.put(`/regions/sub-regions/${id}`, data),
+		deleteSubRegion: (id) => api.delete(`/regions/sub-regions/${id}`)
 	},
 
 	// Transaction endpoints
@@ -315,7 +323,9 @@ const api = {
 
 	// Report endpoints
 	reports: {
-		getSummary: (startDate, endDate) => api.get('/reports/summary', { startDate, endDate })
+		getSummary: (startDate, endDate) => api.get('/reports/summary', { startDate, endDate }),
+		getSummaryByRegion: (startDate, endDate) =>
+			api.get('/reports/summary-by-region', { startDate, endDate })
 	},
 
 	// Armada (fleet) endpoints

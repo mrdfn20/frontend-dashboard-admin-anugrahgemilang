@@ -5,6 +5,7 @@
 		reportActions,
 		dateRange,
 		summary,
+		regionSummary,
 		transactions,
 		isLoading,
 		error,
@@ -148,6 +149,66 @@
 					Sisa hutang periode ini: {transactionHelpers.formatCurrency($summary.remaining_debt)}
 				</p>
 			</div>
+		</div>
+
+		<!-- Ringkasan per wilayah -->
+		<div class="mb-6 overflow-x-auto rounded-lg bg-white shadow">
+			<div class="border-b border-gray-200 px-4 py-3">
+				<h2 class="text-sm font-semibold text-gray-900">Omzet & Hutang per Wilayah</h2>
+			</div>
+			<table class="min-w-full divide-y divide-gray-200">
+				<thead class="bg-gray-50">
+					<tr>
+						<th
+							class="px-4 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							>Kecamatan</th
+						>
+						<th
+							class="px-4 py-2 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+							>Transaksi</th
+						>
+						<th
+							class="px-4 py-2 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+							>Pendapatan</th
+						>
+						<th
+							class="px-4 py-2 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+							>Nilai Penjualan</th
+						>
+						<th
+							class="px-4 py-2 text-right text-xs font-medium tracking-wider text-gray-500 uppercase"
+							>Sisa Hutang</th
+						>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-gray-200">
+					{#each $regionSummary as row (row.region_id)}
+						<tr class="hover:bg-gray-50">
+							<td class="px-4 py-2 text-sm font-medium whitespace-nowrap text-gray-900">
+								{row.region_name}
+							</td>
+							<td class="px-4 py-2 text-right text-sm whitespace-nowrap text-gray-700">
+								{row.total_transactions}
+							</td>
+							<td class="px-4 py-2 text-right text-sm whitespace-nowrap text-green-700">
+								{transactionHelpers.formatCurrency(row.total_income)}
+							</td>
+							<td class="px-4 py-2 text-right text-sm whitespace-nowrap text-gray-700">
+								{transactionHelpers.formatCurrency(row.total_sales)}
+							</td>
+							<td class="px-4 py-2 text-right text-sm whitespace-nowrap text-red-600">
+								{transactionHelpers.formatCurrency(row.remaining_debt)}
+							</td>
+						</tr>
+					{:else}
+						<tr>
+							<td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">
+								Gak ada transaksi di rentang tanggal ini.
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</div>
 
 		<!-- Detail table -->

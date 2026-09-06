@@ -17,6 +17,7 @@ function defaultDateRange() {
 
 export const dateRange = writable(defaultDateRange());
 export const summary = writable(null);
+export const regionSummary = writable([]);
 export const transactions = writable([]);
 export const isLoading = writable(false);
 export const error = writable(null);
@@ -32,8 +33,9 @@ export const reportActions = {
 				dateRange.subscribe((r) => resolve(r))();
 			});
 
-			const [summaryData, transactionsData] = await Promise.all([
+			const [summaryData, regionSummaryData, transactionsData] = await Promise.all([
 				api.reports.getSummary(range.startDate, range.endDate),
+				api.reports.getSummaryByRegion(range.startDate, range.endDate),
 				api.transactions.getByFilter({
 					startDate: range.startDate,
 					endDate: range.endDate,
@@ -43,6 +45,7 @@ export const reportActions = {
 			]);
 
 			summary.set(summaryData);
+			regionSummary.set(Array.isArray(regionSummaryData) ? regionSummaryData : []);
 			transactions.set(Array.isArray(transactionsData) ? transactionsData : []);
 			hasGenerated.set(true);
 		} catch (err) {
