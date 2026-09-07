@@ -1,10 +1,11 @@
 <!-- src/lib/components/customers/CustomerForm.svelte -->
 <script>
 	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, onMount } from 'svelte';
 	import { customerActions } from '$lib/stores/customers.js';
 	import { validateCustomer, defaultCustomer, cleanCustomerData } from '$lib/models/customer.js';
 	import { selectOnFocus } from '$lib/actions/selectOnFocus.js';
+	import { regions, subRegions, regionActions } from '$lib/stores/regions.js';
 
 	// Props
 	export let customer = null; // null for add, object for edit
@@ -31,6 +32,39 @@
 	let errors = {};
 	let isSubmitting = false;
 	let isEdit = !!customer;
+
+	// 🆕 Kecamatan (region) cuma bantuan UI buat nyempitin dropdown Sub-Wilayah - yang
+	// beneran dikirim ke API cuma formData.sub_region_id. Kalau edit pelanggan yang udah
+	// punya sub_region_id, region induknya ditebak begitu daftar subRegions ke-load.
+	let selectedRegionId = '';
+	let regionGuessedFromExisting = false;
+	$: if (isEdit && !regionGuessedFromExisting && formData.sub_region_id && $subRegions.length > 0) {
+		const sr = $subRegions.find((s) => s.id === Number(formData.sub_region_id));
+		if (sr) selectedRegionId = String(sr.region_id);
+		regionGuessedFromExisting = true;
+	}
+
+	$: visibleSubRegions = selectedRegionId
+		? $subRegions.filter((sr) => sr.region_id === Number(selectedRegionId))
+		: $subRegions;
+
+	// Reset pilihan sub-wilayah kalau region diganti dan pilihan lama gak relevan lagi
+	let previousSelectedRegionId = '';
+	$: {
+		if (selectedRegionId !== previousSelectedRegionId) {
+			previousSelectedRegionId = selectedRegionId;
+			if (
+				formData.sub_region_id &&
+				!visibleSubRegions.some((sr) => sr.id === Number(formData.sub_region_id))
+			) {
+				formData.sub_region_id = '';
+			}
+		}
+	}
+
+	onMount(() => {
+		regionActions.loadAll();
+	});
 
 	// Form options (these would typically come from API or store)
 	const titleOptions = ['BAPAK', 'IBU'];
@@ -287,6 +321,73 @@
 								bind:value={formData.subscription_date}
 								class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
 							/>
+						</div>
+
+						<!-- 🆕 Kecamatan (bantuan nyempitin pilihan Sub-Wilayah, gak dikirim ke API) -->
+						<div>
+							<label for="customer_region" class="block text-sm font-medium text-gray-700">
+								Kecamatan
+							</label>
+							<select
+								id="customer_region"
+								bind:value={selectedRegionId}
+								class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+							>
+								<option value="">Semua Kecamatan</option>
+								{#each $regions as r (r.id)}
+									<option value={r.id}>{r.region_name}</option>
+								{/each}
+							</select>
+						</div>
+
+						<!-- 🆕 Sub-Wilayah - ini yang beneran disimpan (sub_region_id) -->
+						<div>
+							<label for="customer_sub_region" class="block text-sm font-medium text-gray-700">
+								Sub-Wilayah
+							</label>
+							<select
+								id="customer_sub_region"
+								bind:value={formData.sub_region_id}
+								class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+							>
+								<option value="">Belum dikategorikan</option>
+								{#each visibleSubRegions as sr (sr.id)}
+									<option value={sr.id}>{sr.sub_region_name}</option>
+								{/each}
+							</select>
+						</div>
+
+						<!-- 🆕 Koordinat (opsional, buat link Maps presisi di halaman detail) -->
+						<div>
+							<label for="customer_latitude" class="block text-sm font-medium text-gray-700">
+								Latitude <span class="text-xs font-normal text-gray-400">(opsional)</span>
+							</label>
+							<input
+								id="customer_latitude"
+								type="number"
+								step="0.000001"
+								bind:value={formData.latitude}
+								use:selectOnFocus
+								placeholder="mis. -6.123456"
+								class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+							/>
+						</div>
+						<div>
+							<label for="customer_longitude" class="block text-sm font-medium text-gray-700">
+								Longitude <span class="text-xs font-normal text-gray-400">(opsional)</span>
+							</label>
+							<input
+								id="customer_longitude"
+								type="number"
+								step="0.000001"
+								bind:value={formData.longitude}
+								use:selectOnFocus
+								placeholder="mis. 106.123456"
+								class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+							/>
+							<p class="mt-1 text-xs text-gray-400">
+								Klik kanan lokasi di Google Maps → salin koordinat, tempel di sini.
+							</p>
 						</div>
 					</div>
 				</div>

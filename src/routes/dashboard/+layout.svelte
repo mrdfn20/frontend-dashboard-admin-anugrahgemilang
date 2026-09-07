@@ -222,12 +222,17 @@
 					class="from-maroon-700/0 via-maroon-700/5 to-maroon-700/0 absolute inset-0 animate-pulse
 							bg-gradient-to-r"
 				></div>
-				<h1
-					class="relative z-10 text-xl font-bold transition-all duration-300
+				<div
+					class="relative z-10 flex items-center gap-2 px-3 transition-all duration-300
 						   {$sidebar.isSwipeActive ? 'scale-95' : 'scale-100'}"
 				>
-					CV Anugrah Gemilang
-				</h1>
+					<img
+						src="/logo.png"
+						alt="Logo CV Anugrah Gemilang"
+						class="h-8 w-8 flex-shrink-0 object-contain"
+					/>
+					<h1 class="text-xl font-bold">CV Anugrah Gemilang</h1>
+				</div>
 			</div>
 
 			<!-- Navigation Menu -->

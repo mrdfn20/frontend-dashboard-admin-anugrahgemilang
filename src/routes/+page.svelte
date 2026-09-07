@@ -77,6 +77,11 @@
 	<div class="flex w-full items-center justify-center p-8 md:w-1/2">
 		<div class="w-full max-w-md">
 			<div class="mb-10 text-center">
+				<img
+					src="/logo.png"
+					alt="Logo CV. Anugrah Gemilang"
+					class="mx-auto mb-3 h-16 w-16 object-contain"
+				/>
 				<h1 class="mb-2 text-3xl font-bold text-gray-900">CV. Anugrah Gemilang</h1>
 				<p class="text-gray-600">Sistem Pintar CV. Anugrah Gemilang</p>
 			</div>
