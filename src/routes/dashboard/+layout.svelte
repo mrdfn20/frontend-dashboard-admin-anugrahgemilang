@@ -17,10 +17,13 @@
 	let isInViewport = true;
 	let intersectionObserver;
 
-	// 🆕 Dashboard disembunyikan dari nav buat Driver (endpoint /dashboard/* backend-nya
-	// juga Admin/Editor only) - kalau somehow kesasar ke sini (link lama, back button),
-	// lempar ke Transaksi aja daripada nampilin halaman penuh error 403.
-	$: if ($auth.user?.role === 'Driver' && $page.url.pathname === '/dashboard') {
+	// 🆕 Dashboard & Laporan disembunyikan dari nav buat Driver (endpoint backend-nya
+	// Admin/Editor only) - kalau somehow kesasar ke sini (link lama, back button, ketik
+	// URL manual), lempar ke Transaksi aja daripada nampilin halaman penuh error 403.
+	$: if (
+		$auth.user?.role === 'Driver' &&
+		($page.url.pathname === '/dashboard' || $page.url.pathname.startsWith('/dashboard/reports'))
+	) {
 		goto('/dashboard/transactions');
 	}
 
@@ -538,35 +541,37 @@
 					</a>
 				{/if}
 
-				<!-- Reports -->
-				<a
-					href="/dashboard/reports"
-					on:click={handleMenuClick}
-					class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+				<!-- Reports (disembunyikan buat Driver, sama kayak Dashboard) -->
+				{#if $auth.user?.role !== 'Driver'}
+					<a
+						href="/dashboard/reports"
+						on:click={handleMenuClick}
+						class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
 						   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
 						   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
 						   {isActiveRoute('/dashboard/reports')
-						? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
-						: ''}"
-					role="listitem"
-					aria-current={isActiveRoute('/dashboard/reports') ? 'page' : undefined}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
+							? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+							: ''}"
+						role="listitem"
+						aria-current={isActiveRoute('/dashboard/reports') ? 'page' : undefined}
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V7a2 2 0 012-2h2a2 2 0 012 2v2M7 7h10"
-						/>
-					</svg>
-					<span class="transition-all duration-200 group-hover:translate-x-1">Laporan</span>
-				</a>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V7a2 2 0 012-2h2a2 2 0 012 2v2M7 7h10"
+							/>
+						</svg>
+						<span class="transition-all duration-200 group-hover:translate-x-1">Laporan</span>
+					</a>
+				{/if}
 
 				<!-- Panduan Penggunaan (semua role) -->
 				<a
