@@ -6,6 +6,7 @@
 	// Props
 	export let transactions = [];
 	export let customers = [];
+	export let canDelete = true; // false utk role Driver - boleh bayar hutang, belum boleh hapus
 
 	const dispatch = createEventDispatcher();
 
@@ -98,13 +99,15 @@
 						Bayar Hutang
 					</button>
 				{/if}
-				<button
-					type="button"
-					on:click={() => dispatch('delete', transaction)}
-					class="text-sm font-medium text-red-600 hover:text-red-800"
-				>
-					Hapus
-				</button>
+				{#if canDelete}
+					<button
+						type="button"
+						on:click={() => dispatch('delete', transaction)}
+						class="text-sm font-medium text-red-600 hover:text-red-800"
+					>
+						Hapus
+					</button>
+				{/if}
 			</div>
 		</div>
 	{:else}

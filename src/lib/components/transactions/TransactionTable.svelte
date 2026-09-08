@@ -9,6 +9,7 @@
 	export let transactions = [];
 	export let customers = []; // utk lookup nama pelanggan (transaksi tidak menyertakan nama)
 	export let readonly = false; // true = sembunyikan kolom Aksi (dipakai di halaman Laporan)
+	export let canDelete = true; // false utk role Driver - boleh bayar hutang, belum boleh hapus
 
 	const dispatch = createEventDispatcher();
 
@@ -152,13 +153,15 @@
 										Bayar Hutang
 									</button>
 								{/if}
-								<button
-									type="button"
-									on:click={() => handleDelete(transaction)}
-									class="font-medium text-red-600 hover:text-red-800"
-								>
-									Hapus
-								</button>
+								{#if canDelete}
+									<button
+										type="button"
+										on:click={() => handleDelete(transaction)}
+										class="font-medium text-red-600 hover:text-red-800"
+									>
+										Hapus
+									</button>
+								{/if}
 							</td>
 						{/if}
 					</tr>

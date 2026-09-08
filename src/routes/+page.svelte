@@ -82,7 +82,12 @@
 					alt="Logo CV. Anugrah Gemilang"
 					class="mx-auto mb-3 h-16 w-16 object-contain"
 				/>
-				<h1 class="mb-2 text-3xl font-bold text-gray-900">CV. Anugrah Gemilang</h1>
+				<h1
+					class="mb-2 text-4xl font-bold text-gray-900"
+					style="font-family: 'Dancing Script', cursive;"
+				>
+					CV. Anugrah Gemilang
+				</h1>
 				<p class="text-gray-600">Sistem Pintar CV. Anugrah Gemilang</p>
 			</div>
 

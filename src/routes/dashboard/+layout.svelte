@@ -17,6 +17,13 @@
 	let isInViewport = true;
 	let intersectionObserver;
 
+	// 🆕 Dashboard disembunyikan dari nav buat Driver (endpoint /dashboard/* backend-nya
+	// juga Admin/Editor only) - kalau somehow kesasar ke sini (link lama, back button),
+	// lempar ke Transaksi aja daripada nampilin halaman penuh error 403.
+	$: if ($auth.user?.role === 'Driver' && $page.url.pathname === '/dashboard') {
+		goto('/dashboard/transactions');
+	}
+
 	onMount(() => {
 		if (!$auth.isAuthenticated) {
 			goto('/');
@@ -223,15 +230,18 @@
 							bg-gradient-to-r"
 				></div>
 				<div
-					class="relative z-10 flex items-center gap-2 px-3 transition-all duration-300
+					class="relative z-10 flex min-w-0 items-center gap-2 px-3 transition-all duration-300
 						   {$sidebar.isSwipeActive ? 'scale-95' : 'scale-100'}"
 				>
-					<img
-						src="/logo.png"
-						alt="Logo CV Anugrah Gemilang"
-						class="h-8 w-8 flex-shrink-0 object-contain"
-					/>
-					<h1 class="text-xl font-bold">CV Anugrah Gemilang</h1>
+					<span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white">
+						<img src="/logo.png" alt="Logo CV Anugrah Gemilang" class="h-6 w-6 object-contain" />
+					</span>
+					<h1
+						class="truncate text-lg leading-none font-bold whitespace-nowrap"
+						style="font-family: 'Dancing Script', cursive;"
+					>
+						CV Anugrah Gemilang
+					</h1>
 				</div>
 			</div>
 
@@ -239,37 +249,39 @@
 			<!-- pb-24 - kasih ruang di bawah biar item menu terakhir gak ketutupan sama kotak
 			     Shortcuts yang posisinya absolute di bawah sidebar -->
 			<nav class="mt-5 flex-1 space-y-1 overflow-y-auto px-2 pb-24" role="list">
-				<!-- Dashboard -->
-				<a
-					href="/dashboard"
-					on:click={handleMenuClick}
-					class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+				<!-- Dashboard (disembunyikan buat Driver - gak relevan buat kerjaan lapangan) -->
+				{#if $auth.user?.role !== 'Driver'}
+					<a
+						href="/dashboard"
+						on:click={handleMenuClick}
+						class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
 						   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
 						   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
 						   {isActiveRoute('/dashboard') && $page.url.pathname === '/dashboard'
-						? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
-						: ''}"
-					role="listitem"
-					aria-current={isActiveRoute('/dashboard') && $page.url.pathname === '/dashboard'
-						? 'page'
-						: undefined}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
+							? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
+							: ''}"
+						role="listitem"
+						aria-current={isActiveRoute('/dashboard') && $page.url.pathname === '/dashboard'
+							? 'page'
+							: undefined}
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-						/>
-					</svg>
-					<span class="transition-all duration-200 group-hover:translate-x-1">Dashboard</span>
-				</a>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+							/>
+						</svg>
+						<span class="transition-all duration-200 group-hover:translate-x-1">Dashboard</span>
+					</a>
+				{/if}
 
 				<!-- Customers -->
 				<a

@@ -1,6 +1,7 @@
 <!-- src/lib/components/customers/AddBalanceModal.svelte -->
 <script>
 	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
+	import { sidebarOffsetClass } from '$lib/stores/sidebar.js';
 	import { createEventDispatcher } from 'svelte';
 	import { api } from '$lib/services/api.js';
 	import toast from 'svelte-french-toast';
@@ -52,7 +53,7 @@
 	}
 </script>
 
-<div class="fixed inset-0 z-50 overflow-y-auto" use:lockBodyScroll>
+<div class="fixed inset-0 z-50 overflow-y-auto {$sidebarOffsetClass}" use:lockBodyScroll>
 	<div class="flex min-h-screen items-center justify-center px-4 py-6">
 		<div
 			class="fixed inset-0 bg-white/20 backdrop-blur-md transition-all duration-300"

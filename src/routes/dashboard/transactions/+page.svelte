@@ -11,6 +11,7 @@
 		pagination
 	} from '$lib/stores/transactions.js';
 	import { customerActions, customers } from '$lib/stores/customers.js';
+	import { auth } from '$lib/stores/auth.js';
 	import TransactionFilter from '$lib/components/transactions/TransactionFilter.svelte';
 	import TransactionTable from '$lib/components/transactions/TransactionTable.svelte';
 	import TransactionCard from '$lib/components/transactions/TransactionCard.svelte';
@@ -28,13 +29,18 @@
 	let selectedTransaction = null;
 	let isDeleting = false;
 
+	// 🆕 Transaksi Terhapus = fitur restore, khusus Admin/Editor (backend-nya juga
+	// nolak Driver, GET /transactions/deleted). Driver sekarang boleh input transaksi/
+	// bayar hutang, TAPI belum boleh hapus/restore - beda kewenangan.
+	$: canManageDeleted = $auth.user?.role !== 'Driver';
+
 	onMount(async () => {
 		// Customers dibutuhkan utk lookup nama & dropdown pelanggan di form
-		await Promise.all([
-			customerActions.loadCustomers(),
-			transactionActions.loadTransactions(),
-			transactionActions.loadDeletedTransactions()
-		]);
+		const loaders = [customerActions.loadCustomers(), transactionActions.loadTransactions()];
+		if (canManageDeleted) {
+			loaders.push(transactionActions.loadDeletedTransactions());
+		}
+		await Promise.all(loaders);
 	});
 
 	function getCustomerName(customerId) {
@@ -97,17 +103,19 @@
 				<p class="text-gray-500">Catat transaksi galon & kelola pelunasan hutang pelanggan</p>
 			</div>
 			<div class="flex gap-2">
-				<button
-					on:click={() => (showDeletedModal = true)}
-					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-				>
-					Transaksi Terhapus
-					{#if $deletedTransactions.length > 0}
-						<span class="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs text-gray-700">
-							{$deletedTransactions.length}
-						</span>
-					{/if}
-				</button>
+				{#if canManageDeleted}
+					<button
+						on:click={() => (showDeletedModal = true)}
+						class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+					>
+						Transaksi Terhapus
+						{#if $deletedTransactions.length > 0}
+							<span class="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs text-gray-700">
+								{$deletedTransactions.length}
+							</span>
+						{/if}
+					</button>
+				{/if}
 				<button
 					on:click={handleAddTransaction}
 					class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
@@ -161,12 +169,14 @@
 		<TransactionTable
 			transactions={$transactions}
 			customers={$customers}
+			canDelete={canManageDeleted}
 			on:payDebt={handlePayDebt}
 			on:delete={handleDelete}
 		/>
 		<TransactionCard
 			transactions={$transactions}
 			customers={$customers}
+			canDelete={canManageDeleted}
 			on:payDebt={handlePayDebt}
 			on:delete={handleDelete}
 		/>

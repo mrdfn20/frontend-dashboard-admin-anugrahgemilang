@@ -1,5 +1,5 @@
 // src/lib/stores/sidebar.js - Enhanced Final Version
-import { writable } from 'svelte/store';
+import { writable, derived } from 'svelte/store';
 import { browser } from '$app/environment';
 
 function createSidebarStore() {
@@ -283,3 +283,12 @@ function createSidebarStore() {
 }
 
 export const sidebar = createSidebarStore();
+
+// 🆕 Class siap-pakai buat modal/overlay `fixed inset-0` - sidebar itu sendiri `fixed`,
+// jadi modal yang "centered" secara matematis di FULL viewport keliatan geser ke kanan
+// begitu sidebar (256px, w-64) nutupin sebagian kiri layar. Samain pola-nya kayak area
+// konten utama (`ml-64` pas sidebar kebuka di desktop) supaya modal ke-center di AREA
+// YANG KELIATAN, bukan di full viewport. Dipakai persis: `class="... {$sidebarOffsetClass}"`.
+export const sidebarOffsetClass = derived(sidebar, ($sidebar) =>
+	$sidebar.isOpen && !$sidebar.isMobile && !$sidebar.isLoading ? 'lg:ml-64' : ''
+);
