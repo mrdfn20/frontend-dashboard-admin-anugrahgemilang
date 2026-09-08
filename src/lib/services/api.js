@@ -278,6 +278,9 @@ const api = {
 		getDebts: (filters) => api.get('/paymentlogs/getdebts', filters),
 		// Versi paginated (page/limit) - dipakai halaman Hutang Pelanggan.
 		getDebtsPaginated: (filters) => api.getPaginated('/paymentlogs/getdebts', filters),
+		// Ringkasan (count + total sisa hutang) TANPA paginasi - buat kartu ringkasan,
+		// biar gak dihitung dari data yang kebetulan udah ke-load doang (lihat store payments.js).
+		getDebtsSummary: (filters) => api.get('/paymentlogs/getdebts/summary', filters),
 		create: (data) => api.post('/paymentlogs', data),
 		payDebt: (data) => api.post('/paymentlogs/paydebt', data)
 	},

@@ -15,6 +15,10 @@ export const isLoading = writable(false);
 export const error = writable(null);
 export const hasMore = writable(true);
 export const pagination = writable({ page: 1, limit: 15, total: 0 });
+// 🆕 Ringkasan (count + total sisa hutang) dari SELURUH data yang cocok filter, bukan cuma
+// yang udah ke-load lewat infinite scroll - fix bug kartu ringkasan nunjukin angka lebih
+// kecil dari yang sebenarnya sebelum di-scroll sampai habis. Lihat GET /getdebts/summary.
+export const summary = writable({ count: 0, totalRemaining: 0 });
 
 // Filter state - sesuai parameter yang didukung GET /paymentlogs/getdebts
 export const filters = writable({
@@ -72,9 +76,38 @@ export const paymentActions = {
 		}
 	},
 
+	/**
+	 * Ambil ringkasan (count + total sisa hutang) sesuai filter aktif - dipanggil bareng
+	 * tiap kali list di-reset (load awal, ganti filter, reset filter, abis bayar hutang),
+	 * biar kartu ringkasan selalu nunjukin angka SEBENARNYA (bukan cuma yang ke-load).
+	 */
+	async loadSummary() {
+		try {
+			const currentFilters = get(filters);
+			const params = { ...currentFilters };
+			delete params.sortBy;
+			delete params.sortOrder;
+			Object.keys(params).forEach((key) => {
+				if (params[key] === null || params[key] === '') {
+					delete params[key];
+				}
+			});
+
+			const result = await api.payments.getDebtsSummary(params);
+			summary.set({
+				count: result?.count ?? 0,
+				totalRemaining: Number(result?.totalRemaining ?? 0)
+			});
+		} catch (err) {
+			console.error('Failed to load debts summary:', err);
+		}
+	},
+
 	/** Load halaman pertama (nama lama dipertahankan, dipanggil dari onMount & setelah bayar hutang). */
 	async loadDebts() {
-		return await this.loadPage({ reset: true });
+		const result = await this.loadPage({ reset: true });
+		await this.loadSummary();
+		return result;
 	},
 
 	/**
@@ -84,6 +117,7 @@ export const paymentActions = {
 	async applyFilters(newFilters) {
 		filters.update((current) => ({ ...current, ...newFilters }));
 		await this.loadPage({ reset: true });
+		await this.loadSummary();
 	},
 
 	/**
@@ -99,5 +133,6 @@ export const paymentActions = {
 			sortOrder: 'DESC'
 		});
 		await this.loadPage({ reset: true });
+		await this.loadSummary();
 	}
 };
