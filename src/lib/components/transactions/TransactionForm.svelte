@@ -33,12 +33,17 @@
 		}
 	});
 
+	// 🆕 Gak ada lagi pilihan "Jenis Transaksi" Tunai/Hutang di depan - dulu bikin bingung
+	// admin pas pelanggan bayar tunai TAPI lebih (harus milih "Hutang" walau sebenernya
+	// lunas). Sekarang cuma 1 field "Jumlah Dibayar" (auto keisi = estimasi total),
+	// backend yang otomatis nentuin status akhir (Tunai/Hutang) dari nominalnya - persis
+	// pola yang sama kayak PayDebtModal. Selalu dikirim transaction_type: 'Hutang' ke API,
+	// backend upgrade jadi 'Tunai' sendiri kalau amount_paid >= total_price.
 	let formData = {
 		customer_id: '',
 		gallon_filled: 0,
 		gallon_empty: 0,
 		gallon_returned: 0,
-		transaction_type: 'Tunai',
 		armada_id: '',
 		payment_amount: 0
 	};
@@ -85,13 +90,24 @@
 		}
 	}
 
-	// ===== Estimasi total & penjelasan Tunai/Hutang =====
+	// ===== Estimasi total & penjelasan status pembayaran =====
 	$: estimatedTotal = selectedCustomer
 		? (Number(selectedCustomer.price) || 0) * (Number(formData.gallon_filled) || 0)
 		: 0;
 
+	// 🆕 Jumlah Dibayar auto-ngikutin estimasi total (kasus paling umum: bayar pas,
+	// gak perlu ngetik apa-apa) - TAPI berhenti "ngikutin" begitu admin ngetik manual
+	// nominal yang beda dari estimasi saat itu, biar gak nimpa ketikan orang.
+	let previousEstimatedTotal = 0;
+	$: {
+		if (Number(formData.payment_amount) === previousEstimatedTotal) {
+			formData.payment_amount = estimatedTotal;
+		}
+		previousEstimatedTotal = estimatedTotal;
+	}
+
 	$: paymentHint = (() => {
-		if (formData.transaction_type !== 'Hutang' || !selectedCustomer) return null;
+		if (!selectedCustomer) return null;
 		const nominal = Number(formData.payment_amount) || 0;
 		if (nominal <= 0) {
 			return {
@@ -142,11 +158,11 @@
 				gallon_filled: parseInt(formData.gallon_filled),
 				gallon_empty: parseInt(formData.gallon_empty),
 				gallon_returned: parseInt(formData.gallon_returned),
-				transaction_type: formData.transaction_type,
+				// Selalu 'Hutang' - backend yang otomatis upgrade ke 'Tunai' kalau
+				// payment_amount >= total_price (lihat catatan di deklarasi formData).
+				transaction_type: 'Hutang',
 				armada_id: parseInt(formData.armada_id),
-				// Transaksi Tunai selalu lunas otomatis di BE, payment_amount diabaikan
-				payment_amount:
-					formData.transaction_type === 'Tunai' ? 0 : parseFloat(formData.payment_amount)
+				payment_amount: parseFloat(formData.payment_amount) || 0
 			};
 
 			await transactionActions.createTransaction(payload);
@@ -324,70 +340,37 @@
 							</div>
 						{/if}
 
-						<!-- Jenis Transaksi -->
+						<!-- Jumlah Dibayar - satu-satunya input, auto keisi = estimasi total, backend
+						     yang nentuin status Tunai/Hutang akhir dari nominal ini -->
 						<div class="md:col-span-2">
-							<span class="block text-sm font-medium text-gray-700">
-								Jenis Transaksi <span class="text-red-500">*</span>
-							</span>
-							<div class="mt-1 flex gap-4">
-								<label class="flex items-center gap-2 text-sm text-gray-700">
-									<input
-										type="radio"
-										bind:group={formData.transaction_type}
-										value="Tunai"
-										class="text-maroon-600 focus:ring-maroon-500"
-									/>
-									Tunai (lunas otomatis)
-								</label>
-								<label class="flex items-center gap-2 text-sm text-gray-700">
-									<input
-										type="radio"
-										bind:group={formData.transaction_type}
-										value="Hutang"
-										class="text-maroon-600 focus:ring-maroon-500"
-									/>
-									Bayar Sebagian / Lebih / Hutang
-								</label>
-							</div>
+							<label for="payment_amount" class="block text-sm font-medium text-gray-700">
+								Jumlah Dibayar <span class="text-red-500">*</span>
+							</label>
+							<CurrencyInput
+								id="payment_amount"
+								bind:value={formData.payment_amount}
+								placeholder="0"
+								hasError={!!errors.payment_amount}
+							/>
 							<p class="mt-1 text-xs text-gray-500">
-								Pilih <strong>Tunai</strong> kalau nominal bayarnya PAS sama total tagihan. Pilih
-								opsi
-								<strong>kedua</strong> buat SEMUA kasus lain: bayar kurang (sisanya jadi hutang),
-								atau
-								<strong>bayar lebih</strong> (misal pelanggan kasih uang lebih buat nitip/nambah saldo)
-								- kelebihannya otomatis masuk Saldo Pelanggan, dipakai otomatis buat transaksi berikutnya.
+								Udah keisi otomatis = estimasi total tagihan (anggap bayar pas/lunas) - tinggal ubah
+								kalau nominalnya beda: <strong>kurang dari itu</strong> = sisanya jadi hutang,
+								<strong>kosongkan/isi 0</strong> = belum bayar sama sekali,
+								<strong>lebih dari itu</strong> = kelebihannya otomatis masuk Saldo Pelanggan.
 							</p>
-						</div>
-
-						<!-- Jumlah Bayar (hanya utk Hutang) -->
-						{#if formData.transaction_type === 'Hutang'}
-							<div class="md:col-span-2">
-								<label for="payment_amount" class="block text-sm font-medium text-gray-700">
-									Jumlah Bayar <span class="text-red-500">*</span>
-								</label>
-								<CurrencyInput
-									id="payment_amount"
-									bind:value={formData.payment_amount}
-									placeholder="0"
-									hasError={!!errors.payment_amount}
-								/>
-								<p class="mt-1 text-xs text-gray-500">
-									Kosongkan / isi 0 kalau pelanggan belum bayar sama sekali.
+							{#if paymentHint}
+								<p
+									class="mt-1 text-xs font-medium {paymentHint.type === 'success'
+										? 'text-green-600'
+										: 'text-amber-600'}"
+								>
+									{paymentHint.text}
 								</p>
-								{#if paymentHint}
-									<p
-										class="mt-1 text-xs font-medium {paymentHint.type === 'success'
-											? 'text-green-600'
-											: 'text-amber-600'}"
-									>
-										{paymentHint.text}
-									</p>
-								{/if}
-								{#if errors.payment_amount}
-									<p class="mt-1 text-sm text-red-600">{errors.payment_amount}</p>
-								{/if}
-							</div>
-						{/if}
+							{/if}
+							{#if errors.payment_amount}
+								<p class="mt-1 text-sm text-red-600">{errors.payment_amount}</p>
+							{/if}
+						</div>
 					</div>
 				</div>
 

@@ -49,11 +49,11 @@
 			items: [
 				{
 					q: 'Cara input transaksi harian',
-					a: 'Buka menu Transaksi → "Tambah Transaksi" → ketik nama pelanggan di kotak pencarian (gak perlu scroll dropdown panjang) → isi jumlah galon isi/kosong/kembali → pilih armada → pilih Tunai atau Hutang → isi jumlah yang dibayar (kalau Tunai, otomatis dianggap lunas) → Simpan.'
+					a: 'Buka menu Transaksi → "Tambah Transaksi" → ketik nama pelanggan di kotak pencarian (gak perlu scroll dropdown panjang) → isi jumlah galon isi/kosong/retur → pilih armada → kolom "Jumlah Dibayar" udah otomatis keisi = estimasi total tagihan (anggap bayar pas/lunas), tinggal diubah kalau nominalnya beda → Simpan.'
 				},
 				{
-					q: 'Bedanya Tunai dan Hutang',
-					a: 'Tunai = dibayar lunas saat itu juga. Hutang = belum dibayar penuh - sistem otomatis pakai saldo pelanggan (kalau ada) buat nutup sebagian, sisanya tercatat sebagai hutang aktif.'
+					q: 'Gak ada pilihan Tunai/Hutang lagi? Gimana sistem nentuin statusnya?',
+					a: 'Sengaja dihilangin biar gak bingung (dulu sering kejadian: pelanggan bayar lunas tapi kasih lebih, jadi bingung pilih Tunai apa Hutang). Sekarang cukup isi "Jumlah Dibayar" sesuai kenyataan - sistem otomatis nentuin: pas = Tunai/Lunas, kurang = sisanya jadi Hutang, kosong/0 = belum bayar sama sekali (full Hutang), lebih = kelebihannya otomatis masuk Saldo Pelanggan. Sama persis prinsipnya kayak "Bayar Hutang" di menu Hutang.'
 				},
 				{
 					q: 'Cara bayar hutang pelanggan',
