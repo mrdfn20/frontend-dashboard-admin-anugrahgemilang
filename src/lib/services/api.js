@@ -225,7 +225,10 @@ const api = {
 		getGallonSummary: () => api.get('/dashboard/gallon-summary'),
 		getActiveCustomers: () => api.get('/dashboard/active-customers'),
 		getDebtStatus: () => api.get('/dashboard/debt-status'),
-		getTodayActivity: () => api.get('/dashboard/today-activity')
+		getTodayActivity: () => api.get('/dashboard/today-activity'),
+		// Ringkasan Hari Ini khusus Driver (scoped ke driver yang login) - dipakai
+		// halaman Dashboard Driver.
+		getDriverSummary: () => api.get('/dashboard/driver-summary')
 	},
 
 	// Customer endpoints
@@ -281,6 +284,10 @@ const api = {
 		// Ringkasan (count + total sisa hutang) TANPA paginasi - buat kartu ringkasan,
 		// biar gak dihitung dari data yang kebetulan udah ke-load doang (lihat store payments.js).
 		getDebtsSummary: (filters) => api.get('/paymentlogs/getdebts/summary', filters),
+		// Pelanggan dengan hutang paling menumpuk (diurutkan terbesar) - kartu "Prioritas
+		// Tagih" di Dashboard Driver.
+		getPriorityDebts: (limit) =>
+			api.get('/paymentlogs/priority-debts', limit ? { limit } : undefined),
 		create: (data) => api.post('/paymentlogs', data),
 		payDebt: (data) => api.post('/paymentlogs/paydebt', data)
 	},

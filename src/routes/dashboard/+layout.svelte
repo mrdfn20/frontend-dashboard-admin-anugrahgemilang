@@ -17,15 +17,25 @@
 	let isInViewport = true;
 	let intersectionObserver;
 
-	// 🆕 Dashboard & Laporan disembunyikan dari nav buat Driver (endpoint backend-nya
-	// Admin/Editor only) - kalau somehow kesasar ke sini (link lama, back button, ketik
-	// URL manual), lempar ke Transaksi aja daripada nampilin halaman penuh error 403.
-	$: if (
-		$auth.user?.role === 'Driver' &&
-		($page.url.pathname === '/dashboard' || $page.url.pathname.startsWith('/dashboard/reports'))
-	) {
+	// 🆕 Dashboard Admin diganti Dashboard Driver (halaman beda, isinya Ringkasan Hari
+	// Ini/Prioritas Tagih/Belum Transaksi Bulan Ini - lihat routes/dashboard/driver).
+	// Laporan tetap disembunyikan (endpoint backend-nya Admin/Editor only) - kalau
+	// somehow kesasar ke sana (link lama, back button, ketik URL manual), lempar ke
+	// Transaksi aja daripada nampilin halaman penuh error 403.
+	$: if ($auth.user?.role === 'Driver' && $page.url.pathname === '/dashboard') {
+		goto('/dashboard/driver');
+	}
+	$: if ($auth.user?.role === 'Driver' && $page.url.pathname.startsWith('/dashboard/reports')) {
 		goto('/dashboard/transactions');
 	}
+
+	// Link nav "Dashboard" nunjuk ke halaman beda tergantung role (Driver punya
+	// halamannya sendiri, lihat routes/dashboard/driver).
+	$: dashboardHref = $auth.user?.role === 'Driver' ? '/dashboard/driver' : '/dashboard';
+	$: isDashboardNavActive =
+		$auth.user?.role === 'Driver'
+			? isActiveRoute('/dashboard/driver')
+			: isActiveRoute('/dashboard') && $page.url.pathname === '/dashboard';
 
 	onMount(() => {
 		if (!$auth.isAuthenticated) {
@@ -141,6 +151,7 @@
 
 	// 🆕 Get page title dynamically
 	function getPageTitle() {
+		if (isActiveRoute('/dashboard/driver')) return 'Dashboard Driver';
 		if (isActiveRoute('/dashboard/customers')) return 'Manajemen Pelanggan';
 		if (isActiveRoute('/dashboard/transactions')) return 'Manajemen Transaksi';
 		if (isActiveRoute('/dashboard/gallon')) return 'Manajemen Galon';
@@ -252,39 +263,33 @@
 			<!-- pb-24 - kasih ruang di bawah biar item menu terakhir gak ketutupan sama kotak
 			     Shortcuts yang posisinya absolute di bawah sidebar -->
 			<nav class="mt-5 flex-1 space-y-1 overflow-y-auto px-2 pb-24" role="list">
-				<!-- Dashboard (disembunyikan buat Driver - gak relevan buat kerjaan lapangan) -->
-				{#if $auth.user?.role !== 'Driver'}
-					<a
-						href="/dashboard"
-						on:click={handleMenuClick}
-						class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
-						   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
-						   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
-						   {isActiveRoute('/dashboard') && $page.url.pathname === '/dashboard'
-							? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20'
-							: ''}"
-						role="listitem"
-						aria-current={isActiveRoute('/dashboard') && $page.url.pathname === '/dashboard'
-							? 'page'
-							: undefined}
+				<!-- Dashboard (Admin/Editor -> Dashboard umum; Driver -> Dashboard Driver) -->
+				<a
+					href={dashboardHref}
+					on:click={handleMenuClick}
+					class="group hover:bg-maroon-700 focus:bg-maroon-700 flex items-center rounded-md px-2 py-3 text-base
+					   font-medium transition-all duration-200 hover:scale-105 hover:shadow-lg
+					   focus:ring-2 focus:ring-white/20 focus:outline-none active:scale-95
+					   {isDashboardNavActive ? 'bg-maroon-700 scale-105 shadow-lg ring-2 ring-white/20' : ''}"
+					role="listitem"
+					aria-current={isDashboardNavActive ? 'page' : undefined}
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
 					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="mr-3 h-6 w-6 transition-all duration-200 group-hover:scale-110 group-hover:rotate-3"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-							/>
-						</svg>
-						<span class="transition-all duration-200 group-hover:translate-x-1">Dashboard</span>
-					</a>
-				{/if}
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+						/>
+					</svg>
+					<span class="transition-all duration-200 group-hover:translate-x-1">Dashboard</span>
+				</a>
 
 				<!-- Customers -->
 				<a

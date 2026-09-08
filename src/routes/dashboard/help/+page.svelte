@@ -45,6 +45,27 @@
 			]
 		},
 		{
+			title: '🚚 Dashboard Driver (khusus Driver)',
+			items: [
+				{
+					q: 'Kenapa halaman Dashboard-nya beda dari punya Admin/Editor?',
+					a: 'Driver punya halaman Dashboard sendiri (bukan Dashboard umum Admin/Editor) yang isinya khusus buat kerjaan lapangan: Ringkasan Hari Ini, Prioritas Tagih, dan Belum Transaksi Bulan Ini. Halaman ini otomatis muncul begitu Driver login/klik menu "Dashboard".'
+				},
+				{
+					q: 'Apa itu kartu "Ringkasan Hari Ini"?',
+					a: 'Total uang yang harusnya ada di tangan hari ini (dari transaksi baru + dari nagih hutang lama), plus rincian jumlah transaksi dan galon yang udah dikirim. Dipakai buat cocokin sama uang fisik sebelum setor ke kantor. Angkanya PRIBADI - Anto cuma lihat punya Anto, Aan cuma lihat punya Aan sendiri.'
+				},
+				{
+					q: 'Apa itu kartu "Prioritas Tagih"?',
+					a: '10 pelanggan dengan hutang paling menumpuk (diurutkan dari yang paling besar), biar Driver tau siapa yang paling penting didatangin duluan pas keliling. Klik nama pelanggan buat langsung ke halaman detailnya.'
+				},
+				{
+					q: 'Apa itu kartu "Belum Transaksi Bulan Ini"?',
+					a: 'Daftar pelanggan yang bulan ini belum ada transaksi sama sekali - bisa jadi kelewat/lupa dikunjungi, atau ada masalah lain yang perlu dicek. Klik nama pelanggan buat lihat detailnya.'
+				}
+			]
+		},
+		{
 			title: '💰 Transaksi',
 			items: [
 				{
