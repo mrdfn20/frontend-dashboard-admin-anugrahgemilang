@@ -47,9 +47,12 @@
 
 	// 🆕 Kartu ringkasan diklik -> pastiin filter Status = "Belum Lunas" (kartu ini emang
 	// representasi hutang yang belum lunas) - biar konsisten sama pola kartu klik-buat-filter
-	// yang udah ada di halaman Pelanggan.
-	async function focusBelumLunas() {
-		await paymentActions.applyFilters({ status: 'Belum Lunas' });
+	// yang udah ada di halaman Pelanggan - klik lagi pas udah aktif = matiin filter (toggle
+	// beneran, bukan cuma "set ke Belum Lunas" - itu bikin klik keliatan gak ngefek sama
+	// sekali kalau statusnya emang udah Belum Lunas dari awal, kayak default-nya).
+	async function toggleBelumLunas() {
+		const newStatus = $filters.status === 'Belum Lunas' ? '' : 'Belum Lunas';
+		await paymentActions.applyFilters({ status: newStatus });
 	}
 
 	function handlePayDebt(event) {
@@ -73,29 +76,31 @@
 	</div>
 
 	<!-- Summary cards - angkanya dari ringkasan server (SELURUH data yang cocok filter,
-	     bukan cuma yang udah ke-load), diklik -> nyaring ke status "Belum Lunas" -->
+	     bukan cuma yang udah ke-load). Diklik -> toggle filter status "Belum Lunas" (klik
+	     lagi buat matiin) - pola & warna sama kayak kartu Aktif/Tidak Aktif di halaman
+	     Pelanggan, biar konsisten & jelas kelihatan interaktif. -->
 	<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
 		<button
 			type="button"
-			on:click={focusBelumLunas}
-			class="rounded-lg border-2 p-4 text-left shadow transition-colors {$filters.status ===
-			'Belum Lunas'
-				? 'border-maroon-500 bg-white'
-				: 'border-transparent bg-white hover:bg-gray-50'}"
+			on:click={toggleBelumLunas}
+			title="Klik buat nyaring transaksi Belum Lunas, klik lagi buat lihat semua"
+			class="rounded-lg border-2 p-4 text-left transition-colors {$filters.status === 'Belum Lunas'
+				? 'border-yellow-500 bg-yellow-50'
+				: 'border-transparent bg-yellow-50/40 hover:bg-yellow-50'}"
 		>
-			<p class="text-sm text-gray-500">Transaksi Belum Lunas</p>
-			<p class="text-2xl font-semibold text-gray-900">{$summary.count}</p>
+			<p class="text-sm text-yellow-700">Transaksi Belum Lunas</p>
+			<p class="text-2xl font-bold text-yellow-800">{$summary.count}</p>
 		</button>
 		<button
 			type="button"
-			on:click={focusBelumLunas}
-			class="rounded-lg border-2 p-4 text-left shadow transition-colors {$filters.status ===
-			'Belum Lunas'
-				? 'border-maroon-500 bg-white'
-				: 'border-transparent bg-white hover:bg-gray-50'}"
+			on:click={toggleBelumLunas}
+			title="Klik buat nyaring transaksi Belum Lunas, klik lagi buat lihat semua"
+			class="rounded-lg border-2 p-4 text-left transition-colors {$filters.status === 'Belum Lunas'
+				? 'border-yellow-500 bg-yellow-50'
+				: 'border-transparent bg-yellow-50/40 hover:bg-yellow-50'}"
 		>
-			<p class="text-sm text-gray-500">Total Sisa Hutang</p>
-			<p class="text-2xl font-semibold text-yellow-700">
+			<p class="text-sm text-yellow-700">Total Sisa Hutang</p>
+			<p class="text-2xl font-bold text-yellow-800">
 				{transactionHelpers.formatCurrency($summary.totalRemaining)}
 			</p>
 		</button>
