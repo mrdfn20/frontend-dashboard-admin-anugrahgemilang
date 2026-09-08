@@ -126,7 +126,11 @@
 			items: [
 				{
 					q: 'Apa bedanya role Admin, Editor, Driver?',
-					a: 'Admin: akses penuh ke semua fitur termasuk kelola user, armada, wilayah, dan koreksi saldo. Editor: bisa nambah/edit pelanggan & transaksi sehari-hari, tapi gak bisa kelola user/armada/wilayah atau koreksi saldo. Driver: cuma bisa lihat data (gak bisa nambah/edit apapun) - cocok buat kurir yang perlu cek alamat/stok galon di lapangan.'
+					a: 'Admin: akses penuh ke semua fitur termasuk kelola user, armada, wilayah, dan koreksi saldo. Editor: bisa nambah/edit pelanggan & transaksi sehari-hari, tapi gak bisa kelola user/armada/wilayah atau koreksi saldo - Editor JUGA yang review aktivitas Driver lewat Audit Log. Driver: sekarang boleh input transaksi baru, bayar hutang, dan tambah saldo pelanggan langsung di lapangan (dulu cuma bisa lihat doang) - tapi gak bisa edit/hapus data, koreksi saldo, atau kelola user/armada/wilayah.'
+				},
+				{
+					q: 'Driver sekarang bisa input transaksi/bayar hutang/tambah saldo - gimana cara Editor/Admin ngecek yang diinput Driver?',
+					a: 'Tiap transaksi/pembayaran yang diinput Driver otomatis dikasih label biru kecil "Driver" di tabel Transaksi, Hutang, dan riwayat transaksi pelanggan - gampang kelihatan bedanya. Buat lihat semuanya sekaligus (termasuk tambah saldo), buka menu Audit Log → pilih dropdown role "Driver" - muncul semua aktivitas Driver terurut dari yang terbaru, tinggal klik buat lihat detailnya.'
 				}
 			]
 		}

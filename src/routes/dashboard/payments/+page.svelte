@@ -11,7 +11,6 @@
 	} from '$lib/stores/payments.js';
 	import { customerActions, customers } from '$lib/stores/customers.js';
 	import { transactionHelpers } from '$lib/stores/transactions.js';
-	import { auth } from '$lib/stores/auth.js';
 	import PaymentsFilter from '$lib/components/payments/PaymentsFilter.svelte';
 	import PaymentsTable from '$lib/components/payments/PaymentsTable.svelte';
 	import PayDebtModal from '$lib/components/transactions/PayDebtModal.svelte';
@@ -20,7 +19,9 @@
 	let selectedDebt = null;
 	let showPayModal = false;
 
-	$: canPay = $auth.user?.role !== 'Driver';
+	// 🆕 Driver sekarang boleh bayar hutang langsung (dulu read-only) - tercatat
+	// otomatis siapa yang bayar lewat kolom created_by_role & Audit Log.
+	const canPay = true;
 
 	onMount(async () => {
 		await Promise.all([customerActions.loadCustomers(), paymentActions.loadDebts()]);

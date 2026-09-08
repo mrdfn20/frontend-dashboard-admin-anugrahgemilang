@@ -5,7 +5,7 @@
 
 	// Props
 	export let debts = []; // sudah di-join sama nama pelanggan dari parent
-	export let canPay = true; // false utk role Driver (read-only)
+	export let canPay = true; // dipertahankan sbg prop reusable, walau semua role skrg boleh bayar
 
 	const dispatch = createEventDispatcher();
 

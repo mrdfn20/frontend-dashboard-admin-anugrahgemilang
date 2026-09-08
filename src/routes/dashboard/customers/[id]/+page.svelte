@@ -657,6 +657,14 @@
 									<tr class="hover:bg-gray-50">
 										<td class="px-4 py-2 whitespace-nowrap text-gray-700">
 											{transactionHelpers.formatDate(tx.transaction_date)}
+											{#if tx.created_by_role === 'Driver'}
+												<span
+													class="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700"
+													title="Diinput langsung oleh Driver di lapangan"
+												>
+													Driver
+												</span>
+											{/if}
 										</td>
 										<td class="px-4 py-2 text-right whitespace-nowrap text-gray-900">
 											{transactionHelpers.formatCurrency(tx.total_price)}

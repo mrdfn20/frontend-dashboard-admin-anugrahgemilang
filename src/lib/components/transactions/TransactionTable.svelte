@@ -103,6 +103,14 @@
 							>
 								{getCustomerName(transaction.customer_id)}
 							</a>
+							{#if transaction.created_by_role === 'Driver'}
+								<span
+									class="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700"
+									title="Diinput langsung oleh Driver di lapangan"
+								>
+									Driver
+								</span>
+							{/if}
 						</td>
 						<td class="px-4 py-3 text-sm whitespace-nowrap">
 							<span

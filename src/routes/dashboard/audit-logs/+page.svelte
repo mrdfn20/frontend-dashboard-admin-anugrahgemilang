@@ -8,7 +8,8 @@
 		isLoading,
 		error,
 		hasMore,
-		pagination
+		pagination,
+		roleFilter
 	} from '$lib/stores/auditLogs.js';
 	import { userActions, users } from '$lib/stores/users.js';
 	import { infiniteScroll } from '$lib/actions/infiniteScroll.js';
@@ -74,6 +75,10 @@
 	function toggleExpand(id) {
 		expandedId = expandedId === id ? null : id;
 	}
+
+	function handleRoleFilterChange(event) {
+		auditLogActions.setRoleFilter(event.currentTarget.value);
+	}
 </script>
 
 <div class="p-6">
@@ -82,14 +87,25 @@
 		<p class="text-gray-500">Riwayat perubahan data di sistem ini</p>
 	</div>
 
-	<div class="mb-4 rounded-lg bg-white p-4 shadow">
+	<div class="mb-4 flex flex-col gap-3 rounded-lg bg-white p-4 shadow sm:flex-row">
 		<input
 			type="text"
 			bind:value={searchInput}
 			on:input={handleSearchInput}
 			placeholder="Cari berdasarkan user, role, aksi, atau endpoint..."
-			class="focus:ring-maroon-500 focus:border-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none"
+			class="focus:ring-maroon-500 focus:border-maroon-500 block w-full flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none"
 		/>
+		<select
+			value={$roleFilter}
+			on:change={handleRoleFilterChange}
+			title="Nyaring cepat berdasarkan role - mis. 'Driver' buat lihat transaksi/pembayaran yang diinput kurir di lapangan"
+			class="focus:ring-maroon-500 focus:border-maroon-500 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none sm:w-56"
+		>
+			<option value="">Semua Role</option>
+			<option value="Admin">Admin</option>
+			<option value="Editor">Editor</option>
+			<option value="Driver">Driver</option>
+		</select>
 	</div>
 
 	{#if $isLoading && $logs.length === 0}

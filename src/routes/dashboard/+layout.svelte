@@ -423,8 +423,10 @@
 							>User Management</span
 						>
 					</a>
+				{/if}
 
-					<!-- Audit Log (Admin only) -->
+				<!-- Audit Log (Admin & Editor - Editor review aktivitas Driver di sini) -->
+				{#if $auth.user?.role === 'Admin' || $auth.user?.role === 'Editor'}
 					<a
 						href="/dashboard/audit-logs"
 						on:click={handleMenuClick}
@@ -453,7 +455,9 @@
 						</svg>
 						<span class="transition-all duration-200 group-hover:translate-x-1">Audit Log</span>
 					</a>
+				{/if}
 
+				{#if $auth.user?.role === 'Admin'}
 					<!-- Kelola Armada (Admin only) -->
 					<a
 						href="/dashboard/armada"

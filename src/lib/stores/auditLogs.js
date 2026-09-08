@@ -12,6 +12,9 @@ export const logs = writable([]);
 export const isLoading = writable(false);
 export const error = writable(null);
 export const searchTerm = writable('');
+// 🆕 Filter role PERSIS (beda dari searchTerm yang substring-match) - dipakai buat
+// nyaring cepat "Aktivitas Driver" (transaksi/bayar-hutang/tambah-saldo yang diinput Driver).
+export const roleFilter = writable('');
 export const hasMore = writable(true);
 export const pagination = writable({ page: 1, limit: 15, total: 0 });
 
@@ -36,9 +39,11 @@ export const auditLogActions = {
 			const currentPagination = get(pagination);
 			const nextPage = reset ? 1 : currentPagination.page + 1;
 			const search = get(searchTerm).trim();
+			const role = get(roleFilter);
 
 			const params = { page: nextPage, limit: currentPagination.limit };
 			if (search) params.search = search;
+			if (role) params.role = role;
 
 			const { data, meta } = await api.auditLogs.getLogsPaginated(params);
 
@@ -70,6 +75,12 @@ export const auditLogActions = {
 	/** Ganti search term lalu reload dari halaman 1. */
 	async search(term) {
 		searchTerm.set(term);
+		await this.loadPage({ reset: true });
+	},
+
+	/** Ganti filter role (exact match) lalu reload dari halaman 1. */
+	async setRoleFilter(role) {
+		roleFilter.set(role);
 		await this.loadPage({ reset: true });
 	}
 };
