@@ -18,8 +18,11 @@ jobs:
           cache: pnpm
       - run: pnpm install
       - run: pnpm run lint
-      - name: Build (VITE_API_URL relatif - satu origin sama backend lewat nginx)
-        run: echo "VITE_API_URL=/api" > .env.production.local && pnpm run build
+      - name: Build (VITE_API_URL relatif; VITE_APP_ENV=staging buat badge "staging" di UI)
+        run: |
+          echo "VITE_API_URL=/api" > .env.production.local
+          echo "VITE_APP_ENV=staging" >> .env.production.local
+          pnpm run build
       - name: Upload build artifact
         uses: actions/upload-artifact@v7.0.1
         with:

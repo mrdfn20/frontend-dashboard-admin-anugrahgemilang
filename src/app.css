@@ -1,3 +1,15 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+/* Bug ditemuin user (2026-09-10): teks panjang di <select> numpuk sama ikon panah
+   dropdown-nya di banyak halaman (filter Pelanggan/Transaksi/Galon/Hutang, form
+   Tambah/Edit, dll). Akar masalahnya: @tailwindcss/forms otomatis nyediain
+   padding-right 2.5rem buat ikon panahnya, TAPI hampir semua <select> di app ini
+   dikasih class `px-3` (cuma 0.75rem kanan-kiri) yang nimpa itu - kalau teks opsinya
+   kebetulan panjang, ikon panahnya numpuk sama huruf terakhir. Dipaksa balik di sini
+   (bukan diedit satu-satu di tiap komponen) biar konsisten di SEMUA halaman sekaligus,
+   dan otomatis kepasang ke <select> baru ke depannya tanpa perlu diinget manual. */
+select {
+	padding-right: 2.5rem !important;
+}

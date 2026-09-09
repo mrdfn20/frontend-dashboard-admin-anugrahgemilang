@@ -88,6 +88,13 @@
 				>
 					CV. Anugrah Gemilang
 				</h1>
+				{#if import.meta.env.VITE_APP_ENV === 'staging'}
+					<span
+						class="mb-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold tracking-wide text-amber-800 uppercase"
+					>
+						Staging
+					</span>
+				{/if}
 				<p class="text-gray-600">Sistem Pintar CV. Anugrah Gemilang</p>
 			</div>
 

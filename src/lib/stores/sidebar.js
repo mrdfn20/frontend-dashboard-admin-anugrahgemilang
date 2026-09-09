@@ -289,6 +289,15 @@ export const sidebar = createSidebarStore();
 // begitu sidebar (256px, w-64) nutupin sebagian kiri layar. Samain pola-nya kayak area
 // konten utama (`ml-64` pas sidebar kebuka di desktop) supaya modal ke-center di AREA
 // YANG KELIATAN, bukan di full viewport. Dipakai persis: `class="... {$sidebarOffsetClass}"`.
+//
+// 🐛 Bug ditemuin user (2026-09-10): dulu ditulis `lg:ml-64` (breakpoint Tailwind
+// 1024px) - tapi `isMobile` di store ini dihitung manual dari `window.innerWidth < 768`
+// (lihat checkIsMobile()), BUKAN dari breakpoint Tailwind. Jadi di lebar layar
+// 768px-1023px, sidebar kebuka (isMobile=false) tapi class `lg:ml-64` BELUM aktif
+// (breakpoint-nya belum ke-capai) - modal jadi gak digeser padahal sidebar udah
+// nutupin sebagian layar. Konten utama (+layout.svelte) sendiri pakai `ml-64` POLOS
+// tanpa prefix breakpoint apapun (soalnya kondisinya udah dihitung di JS, redundant
+// kalau ditambah breakpoint CSS lagi) - disamain persis di sini.
 export const sidebarOffsetClass = derived(sidebar, ($sidebar) =>
-	$sidebar.isOpen && !$sidebar.isMobile && !$sidebar.isLoading ? 'lg:ml-64' : ''
+	$sidebar.isOpen && !$sidebar.isMobile && !$sidebar.isLoading ? 'ml-64' : ''
 );

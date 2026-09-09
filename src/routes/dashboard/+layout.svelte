@@ -250,12 +250,21 @@
 					<span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white">
 						<img src="/logo.png" alt="Logo CV Anugrah Gemilang" class="h-6 w-6 object-contain" />
 					</span>
-					<h1
-						class="truncate text-lg leading-none font-bold whitespace-nowrap"
-						style="font-family: 'Dancing Script', cursive;"
-					>
-						CV Anugrah Gemilang
-					</h1>
+					<div class="min-w-0">
+						<h1
+							class="truncate text-lg leading-none font-bold whitespace-nowrap"
+							style="font-family: 'Dancing Script', cursive;"
+						>
+							CV Anugrah Gemilang
+						</h1>
+						{#if import.meta.env.VITE_APP_ENV === 'staging'}
+							<p
+								class="text-[10px] leading-none font-semibold tracking-widest text-amber-300 uppercase"
+							>
+								Staging
+							</p>
+						{/if}
+					</div>
 				</div>
 			</div>
 
