@@ -39,13 +39,22 @@
 	// backend yang otomatis nentuin status akhir (Tunai/Hutang) dari nominalnya - persis
 	// pola yang sama kayak PayDebtModal. Selalu dikirim transaction_type: 'Hutang' ke API,
 	// backend upgrade jadi 'Tunai' sendiri kalau amount_paid >= total_price.
+	// 🆕 Tanggal transaksi - defaultnya HARI INI, bisa diubah manual buat backdate transaksi
+	// yang telat dicatat. `todayStr` dipakai 2x: nilai awal field ini, dan buat `max` di
+	// date picker (gak boleh pilih tanggal masa depan). Selama field ini gak diubah dari
+	// default-nya, transaction_date SENGAJA gak dikirim ke API sama sekali (lihat
+	// handleSubmit) - biar transaksi normal (gak backdate) tetap kecatat pakai jam PERSIS
+	// saat itu (NOW() di backend), bukan "hari ini jam 00:00:00".
+	const todayStr = new Date().toISOString().slice(0, 10);
+
 	let formData = {
 		customer_id: '',
 		gallon_filled: 0,
 		gallon_empty: 0,
 		gallon_returned: 0,
 		armada_id: '',
-		payment_amount: 0
+		payment_amount: 0,
+		transaction_date: todayStr
 	};
 
 	let errors = {};
@@ -144,6 +153,9 @@
 		if (!formData.armada_id) errors.armada_id = 'Armada wajib dipilih';
 		if (formData.payment_amount === '' || formData.payment_amount < 0)
 			errors.payment_amount = 'Jumlah bayar wajib diisi (>= 0)';
+		if (!formData.transaction_date) errors.transaction_date = 'Tanggal transaksi wajib diisi';
+		else if (formData.transaction_date > todayStr)
+			errors.transaction_date = 'Tanggal transaksi tidak boleh di masa depan';
 
 		return Object.keys(errors).length === 0;
 	}
@@ -164,6 +176,12 @@
 				armada_id: parseInt(formData.armada_id),
 				payment_amount: parseFloat(formData.payment_amount) || 0
 			};
+
+			// Cuma dikirim kalau BEDA dari hari ini (backdate beneran) - lihat catatan di
+			// deklarasi todayStr soal kenapa gak selalu dikirim.
+			if (formData.transaction_date !== todayStr) {
+				payload.transaction_date = formData.transaction_date;
+			}
 
 			await transactionActions.createTransaction(payload);
 			dispatch('success');
@@ -326,6 +344,29 @@
 							</select>
 							{#if errors.armada_id}
 								<p class="mt-1 text-sm text-red-600">{errors.armada_id}</p>
+							{/if}
+						</div>
+
+						<!-- Tanggal Transaksi - default hari ini, bisa diubah buat backdate -->
+						<div>
+							<label for="transaction_date" class="block text-sm font-medium text-gray-700">
+								Tanggal Transaksi <span class="text-red-500">*</span>
+							</label>
+							<input
+								id="transaction_date"
+								type="date"
+								max={todayStr}
+								bind:value={formData.transaction_date}
+								class="focus:border-maroon-500 focus:ring-maroon-500 mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm"
+								class:border-red-300={errors.transaction_date}
+							/>
+							{#if formData.transaction_date && formData.transaction_date !== todayStr}
+								<p class="mt-1 text-xs text-amber-600">
+									Backdate - dicatat buat tanggal ini, bukan hari ini.
+								</p>
+							{/if}
+							{#if errors.transaction_date}
+								<p class="mt-1 text-sm text-red-600">{errors.transaction_date}</p>
 							{/if}
 						</div>
 
