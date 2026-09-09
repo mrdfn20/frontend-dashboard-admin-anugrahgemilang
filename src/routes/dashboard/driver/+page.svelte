@@ -15,24 +15,58 @@
 	let summary = null;
 	let priorityDebts = [];
 	let isLoading = true;
-	let error = null;
+	let errors = []; // 🐛 fix (2026-09-10): dulu pakai Promise.all + 1 variabel `error` -
+	// kalau 2 API gagal bersamaan, cuma 1 pesan yang kesimpen (nutupin yang satunya), dan
+	// SELURUH halaman diganti banner merah walau data yang lain sebenernya berhasil dimuat.
+	// Sekarang pakai Promise.allSettled - tiap panggilan API independen, kegagalan 1
+	// gak bikin yang lain ikut gagal, dan semua pesan error ketampung (bukan cuma 1).
 	let showAllInactive = false;
 
 	onMount(async () => {
-		try {
-			const [summaryRes, priorityRes] = await Promise.all([
+		const [summaryResult, priorityResult, customersResult, activityResult] =
+			await Promise.allSettled([
 				api.dashboard.getDriverSummary(),
 				api.payments.getPriorityDebts(10),
 				customerActions.loadCustomers(),
 				customerActions.loadActivitySummary()
 			]);
-			summary = summaryRes;
-			priorityDebts = priorityRes || [];
-		} catch (err) {
-			error = err.message;
-		} finally {
-			isLoading = false;
+
+		const newErrors = [];
+
+		if (summaryResult.status === 'fulfilled') {
+			summary = summaryResult.value;
+		} else {
+			console.error('Failed to load driver summary:', summaryResult.reason);
+			newErrors.push(
+				`Ringkasan Hari Ini gagal dimuat: ${summaryResult.reason?.message || 'Terjadi kesalahan'}`
+			);
 		}
+
+		if (priorityResult.status === 'fulfilled') {
+			priorityDebts = priorityResult.value || [];
+		} else {
+			console.error('Failed to load priority debts:', priorityResult.reason);
+			newErrors.push(
+				`Prioritas Tagih gagal dimuat: ${priorityResult.reason?.message || 'Terjadi kesalahan'}`
+			);
+		}
+
+		if (customersResult.status === 'rejected') {
+			console.error('Failed to load customers:', customersResult.reason);
+			newErrors.push(
+				`Belum Transaksi Bulan Ini gagal dimuat: ${customersResult.reason?.message || 'Terjadi kesalahan'}`
+			);
+		}
+
+		if (activityResult.status === 'rejected') {
+			console.error('Failed to load activity summary:', activityResult.reason);
+			newErrors.push(
+				`Belum Transaksi Bulan Ini gagal dimuat: ${activityResult.reason?.message || 'Terjadi kesalahan'}`
+			);
+		}
+
+		errors = newErrors;
+		isLoading = false;
 	});
 
 	// Pelanggan yang gak ada di daftar "aktif bulan ini" = belum ada transaksi bulan ini.
@@ -101,15 +135,20 @@
 				></path>
 			</svg>
 		</div>
-	{:else if error}
-		<div class="border-l-4 border-red-600 bg-red-50 p-4">
-			<div class="flex">
-				<div>
-					<p class="text-sm text-red-700">{error}</p>
-				</div>
-			</div>
-		</div>
 	{:else}
+		{#if errors.length > 0}
+			<!-- Sebagian data gagal dimuat - tetap tampilkan data yang berhasil di bawah,
+			     jangan ganti seluruh halaman jadi banner error (lihat catatan onMount). -->
+			<div class="mb-6 border-l-4 border-red-600 bg-red-50 p-4">
+				<p class="text-sm font-medium text-red-800">Sebagian data gagal dimuat:</p>
+				<ul class="mt-1 list-disc space-y-0.5 pl-5 text-sm text-red-700">
+					{#each errors as err (err)}
+						<li>{err}</li>
+					{/each}
+				</ul>
+			</div>
+		{/if}
+
 		<!-- Ringkasan Hari Ini -->
 		<div class="mb-6 rounded-lg bg-white p-6 shadow">
 			<h2 class="mb-4 text-lg font-semibold">Ringkasan Hari Ini</h2>

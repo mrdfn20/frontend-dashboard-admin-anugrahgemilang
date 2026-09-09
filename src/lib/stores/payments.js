@@ -19,6 +19,13 @@ export const pagination = writable({ page: 1, limit: 15, total: 0 });
 // yang udah ke-load lewat infinite scroll - fix bug kartu ringkasan nunjukin angka lebih
 // kecil dari yang sebenarnya sebelum di-scroll sampai habis. Lihat GET /getdebts/summary.
 export const summary = writable({ count: 0, totalRemaining: 0 });
+// 🐛 Bug ditemuin user (2026-09-10): `summary` di atas defaultnya {count:0, totalRemaining:0}
+// - dan loadDebts() manggil loadPage() (yang punya `isLoading` sendiri) DULU baru
+// loadSummary() SETELAHNYA. Jadi begitu tabel selesai kebuka (isLoading udah false, ada
+// data), summary masih pending sejenak nunjukin 0/Rp0 seolah beneran kosong, baru bener
+// pas loadSummary() kelar. summaryLoading dipisah dari isLoading (isLoading punya arti
+// beda - punya list) biar halaman bisa nampilin skeleton di kartunya doang, bukan "0".
+export const summaryLoading = writable(false);
 
 // Filter state - sesuai parameter yang didukung GET /paymentlogs/getdebts
 export const filters = writable({
@@ -82,6 +89,7 @@ export const paymentActions = {
 	 * biar kartu ringkasan selalu nunjukin angka SEBENARNYA (bukan cuma yang ke-load).
 	 */
 	async loadSummary() {
+		summaryLoading.set(true);
 		try {
 			const currentFilters = get(filters);
 			const params = { ...currentFilters };
@@ -100,6 +108,8 @@ export const paymentActions = {
 			});
 		} catch (err) {
 			console.error('Failed to load debts summary:', err);
+		} finally {
+			summaryLoading.set(false);
 		}
 	},
 

@@ -2,6 +2,7 @@
 <script>
 	import { lockBodyScroll } from '$lib/actions/lockBodyScroll.js';
 	import { sidebarOffsetClass } from '$lib/stores/sidebar.js';
+	import { auth } from '$lib/stores/auth.js';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import {
@@ -76,6 +77,14 @@
 		? $customers.filter((c) => $activeCustomerIds.includes(c.id)).length
 		: null;
 	$: inactiveCount = $activeCustomerIds ? $customers.length - activeCount : null;
+
+	// 🐛 Bug ditemuin user (2026-09-10): tombol "Tambah Pelanggan" & "Pelanggan Terhapus"
+	// kelihatan buat SEMUA role termasuk Driver, padahal backend-nya Admin-only
+	// (POST /customers & GET /customers/deleted, lihat routes/customers.js). Klik-nya
+	// tetap ketolak backend (gak bocor data), tapi bikin Driver bingung liat tombol yang
+	// ujung2nya gagal - disembunyikan biar konsisten sama pola "visibility = capability"
+	// yang dipakai di halaman lain (Transaksi, dll).
+	$: isAdmin = $auth.user?.role === 'Admin';
 
 	function toggleActivityFilter(value) {
 		activityFilter.set($activityFilter === value ? '' : value);
@@ -229,34 +238,36 @@
 				<h1 class="text-2xl font-semibold text-gray-900">Manajemen Pelanggan</h1>
 				<p class="text-gray-500">Kelola data pelanggan CV Anugrah Gemilang</p>
 			</div>
-			<div class="flex gap-2">
-				<button
-					on:click={() => goto('/dashboard/customers/deleted')}
-					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-				>
-					Pelanggan Terhapus
-				</button>
-				<button
-					on:click={handleAddCustomer}
-					class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="mr-2 inline h-4 w-4"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
+			{#if isAdmin}
+				<div class="flex gap-2">
+					<button
+						on:click={() => goto('/dashboard/customers/deleted')}
+						class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M12 4v16m8-8H4"
-						/>
-					</svg>
-					Tambah Pelanggan
-				</button>
-			</div>
+						Pelanggan Terhapus
+					</button>
+					<button
+						on:click={handleAddCustomer}
+						class="bg-maroon-600 hover:bg-maroon-700 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="mr-2 inline h-4 w-4"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 4v16m8-8H4"
+							/>
+						</svg>
+						Tambah Pelanggan
+					</button>
+				</div>
+			{/if}
 		</div>
 	</div>
 
@@ -644,34 +655,36 @@
 												/>
 											</svg>
 										</button>
-										<button
-											on:click={() => handleEditCustomer(customer)}
-											class="text-blue-600 hover:text-blue-900"
-											title="Edit"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-												/>
-											</svg>
-										</button>
-										<button
-											on:click={() => handleDeleteCustomer(customer)}
-											class="text-red-600 hover:text-red-900"
-											title="Hapus"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-												/>
-											</svg>
-										</button>
+										{#if isAdmin}
+											<button
+												on:click={() => handleEditCustomer(customer)}
+												class="text-blue-600 hover:text-blue-900"
+												title="Edit"
+											>
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+													/>
+												</svg>
+											</button>
+											<button
+												on:click={() => handleDeleteCustomer(customer)}
+												class="text-red-600 hover:text-red-900"
+												title="Hapus"
+											>
+												<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+													/>
+												</svg>
+											</button>
+										{/if}
 									</div>
 								</td>
 							</tr>

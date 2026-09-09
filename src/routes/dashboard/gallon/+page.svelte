@@ -2,13 +2,15 @@
 <script>
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { auth } from '$lib/stores/auth.js';
 	import {
 		gallonActions,
 		gallonStock,
 		isLoading,
 		error,
 		movements,
-		movementsLoading
+		movementsLoading,
+		movementsError
 	} from '$lib/stores/gallon.js';
 	import { customerActions, customers } from '$lib/stores/customers.js';
 	import GallonFilter from '$lib/components/gallon/GallonFilter.svelte';
@@ -26,12 +28,20 @@
 	let movementsQuery = '';
 	let movementsVisibleCount = itemsPerPage;
 
+	// Tab "Riwayat Pergerakan" backend-nya Admin/Editor only (GET /gallonmovements) -
+	// beda dari "Stok Saat Ini" yang dibuka semua role. Disembunyikan dari Driver biar
+	// gak nampilin tab yang bakal gagal diakses.
+	$: canViewMovements = $auth.user?.role !== 'Driver';
+
 	onMount(async () => {
-		// Customers dibutuhkan utk dropdown sub-wilayah di filter & join nama di riwayat
-		await Promise.all([
+		// Promise.allSettled (bukan Promise.all) - loadMovements() SENGAJA gagal (403)
+		// buat role Driver (lihat canViewMovements), jadi gak boleh bikin loadCustomers/
+		// loadStock ikut keanggep gagal juga. Sebelumnya pakai Promise.all, dan karena gak
+		// ada .catch() di sini, kegagalan loadMovements jadi unhandled promise rejection.
+		await Promise.allSettled([
 			customerActions.loadCustomers(),
 			gallonActions.loadStock(),
-			gallonActions.loadMovements()
+			canViewMovements ? gallonActions.loadMovements() : Promise.resolve()
 		]);
 	});
 
@@ -90,15 +100,17 @@
 			>
 				Stok Saat Ini
 			</button>
-			<button
-				type="button"
-				on:click={() => (activeTab = 'movements')}
-				class="border-b-2 px-1 py-3 text-sm font-medium {activeTab === 'movements'
-					? 'border-maroon-600 text-maroon-600'
-					: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
-			>
-				Riwayat Pergerakan
-			</button>
+			{#if canViewMovements}
+				<button
+					type="button"
+					on:click={() => (activeTab = 'movements')}
+					class="border-b-2 px-1 py-3 text-sm font-medium {activeTab === 'movements'
+						? 'border-maroon-600 text-maroon-600'
+						: 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'}"
+				>
+					Riwayat Pergerakan
+				</button>
+			{/if}
 		</nav>
 	</div>
 
@@ -199,6 +211,13 @@
 						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 					></path>
 				</svg>
+			</div>
+		{:else if $movementsError}
+			<!-- 🐛 Bug ditemuin user (2026-09-10): dulu error ini kesimpen ke store
+			     movementsError tapi gak pernah dibaca di halaman ini, jadi gagal-muat
+			     (403/network error/dll) keliatan sama persis kayak "memang kosong". -->
+			<div class="border-l-4 border-red-600 bg-red-50 p-4">
+				<p class="text-sm text-red-700">{$movementsError}</p>
 			</div>
 		{:else}
 			<GallonMovementsTable movements={visibleMovements} isLoading={$movementsLoading} />

@@ -9,6 +9,7 @@
 		hasMore,
 		pagination,
 		summary,
+		summaryLoading,
 		filters
 	} from '$lib/stores/payments.js';
 	import { customerActions, customers } from '$lib/stores/customers.js';
@@ -89,7 +90,14 @@
 				: 'border-transparent bg-yellow-50/40 hover:bg-yellow-50'}"
 		>
 			<p class="text-sm text-yellow-700">Transaksi Belum Lunas</p>
-			<p class="text-2xl font-bold text-yellow-800">{$summary.count}</p>
+			{#if $summaryLoading}
+				<!-- 🐛 Bug ditemuin user (2026-09-10): dulu langsung nampilin $summary.count yang
+				     default-nya 0 - sekejap sebelum data asli kesimpen, kartu keliatan nunjukin
+				     "0" seolah beneran gak ada hutang, padahal cuma masih loading. -->
+				<p class="h-8 w-12 animate-pulse rounded bg-yellow-200/70"></p>
+			{:else}
+				<p class="text-2xl font-bold text-yellow-800">{$summary.count}</p>
+			{/if}
 		</button>
 		<button
 			type="button"
@@ -100,9 +108,13 @@
 				: 'border-transparent bg-yellow-50/40 hover:bg-yellow-50'}"
 		>
 			<p class="text-sm text-yellow-700">Total Sisa Hutang</p>
-			<p class="text-2xl font-bold text-yellow-800">
-				{transactionHelpers.formatCurrency($summary.totalRemaining)}
-			</p>
+			{#if $summaryLoading}
+				<p class="h-8 w-32 animate-pulse rounded bg-yellow-200/70"></p>
+			{:else}
+				<p class="text-2xl font-bold text-yellow-800">
+					{transactionHelpers.formatCurrency($summary.totalRemaining)}
+				</p>
+			{/if}
 		</button>
 	</div>
 
