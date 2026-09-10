@@ -108,9 +108,10 @@
 	let itemsPerPage = 10;
 	let visibleCount = itemsPerPage;
 
-	// Load customers on mount
+	// Load customers on mount. allSettled (bukan all) - tiap loader nanganin error-nya
+	// sendiri; kalau 1 gagal (mis. token expired sesaat), jangan jadi unhandled rejection.
 	onMount(async () => {
-		await Promise.all([
+		await Promise.allSettled([
 			customerActions.loadCustomers(),
 			customerActions.loadActivitySummary(),
 			loadRegionOptions()

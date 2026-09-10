@@ -35,12 +35,16 @@
 	$: canManageDeleted = $auth.user?.role !== 'Driver';
 
 	onMount(async () => {
-		// Customers dibutuhkan utk lookup nama & dropdown pelanggan di form
+		// Customers dibutuhkan utk lookup nama & dropdown pelanggan di form.
+		// allSettled (bukan all) - tiap loader udah nyimpen error-nya sendiri ke store
+		// masing2 (isLoading/error) & nampilin di UI; kalau salah satu gagal (mis. token
+		// expired sesaat), jangan bikin yang lain ikut keanggep gagal + jangan jadi
+		// "Uncaught (in promise)" di console.
 		const loaders = [customerActions.loadCustomers(), transactionActions.loadTransactions()];
 		if (canManageDeleted) {
 			loaders.push(transactionActions.loadDeletedTransactions());
 		}
-		await Promise.all(loaders);
+		await Promise.allSettled(loaders);
 	});
 
 	function getCustomerName(customerId) {

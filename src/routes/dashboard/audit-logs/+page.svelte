@@ -19,7 +19,8 @@
 	let searchDebounceTimer;
 
 	onMount(async () => {
-		await Promise.all([userActions.loadUsers(), auditLogActions.loadLogs()]);
+		// allSettled (bukan all) - lihat catatan di halaman Transaksi.
+		await Promise.allSettled([userActions.loadUsers(), auditLogActions.loadLogs()]);
 	});
 
 	// Bangun peta user_id -> username begitu daftar user selesai dimuat

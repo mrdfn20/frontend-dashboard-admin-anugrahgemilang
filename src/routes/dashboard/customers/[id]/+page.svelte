@@ -127,12 +127,18 @@
 
 	// Load customer data
 	onMount(async () => {
-		if (customerId) {
+		if (!customerId) return;
+		try {
 			await customerActions.loadCustomer(parseInt(customerId));
-			isLoadingExtras = true;
-			await Promise.all([loadBalance(), loadGallonInfo(), loadCustomerTransactions()]);
-			isLoadingExtras = false;
+		} catch (err) {
+			// loadCustomer udah nyimpen error ke store & ditampilin di UI - jangan
+			// biarin lolos jadi unhandled rejection.
+			console.error('Failed to load customer:', err);
 		}
+		isLoadingExtras = true;
+		// allSettled - tiap loader nanganin error-nya sendiri, 1 gagal gak nyeret yang lain.
+		await Promise.allSettled([loadBalance(), loadGallonInfo(), loadCustomerTransactions()]);
+		isLoadingExtras = false;
 	});
 
 	// Event handlers

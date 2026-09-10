@@ -27,7 +27,9 @@
 	const canPay = true;
 
 	onMount(async () => {
-		await Promise.all([customerActions.loadCustomers(), paymentActions.loadDebts()]);
+		// allSettled (bukan all) - lihat catatan di halaman Transaksi: tiap loader
+		// nanganin error-nya sendiri, jangan sampai 1 gagal jadi unhandled rejection.
+		await Promise.allSettled([customerActions.loadCustomers(), paymentActions.loadDebts()]);
 	});
 
 	// Join nama pelanggan ke tiap baris (BE gak sertain customer_name di kolom hasil,
