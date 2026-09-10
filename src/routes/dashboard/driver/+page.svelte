@@ -51,18 +51,17 @@
 			);
 		}
 
-		if (customersResult.status === 'rejected') {
-			console.error('Failed to load customers:', customersResult.reason);
-			newErrors.push(
-				`Belum Transaksi Bulan Ini gagal dimuat: ${customersResult.reason?.message || 'Terjadi kesalahan'}`
+		// customers & activity-summary dua-duanya nyuapin bagian "Belum Transaksi Bulan Ini" -
+		// digabung jadi 1 pesan aja kalau salah satu/dua-duanya gagal (jangan 2 pesan
+		// identik: itu bikin key `{#each}` bentrok).
+		if (customersResult.status === 'rejected' || activityResult.status === 'rejected') {
+			const reason =
+				customersResult.reason?.message || activityResult.reason?.message || 'Terjadi kesalahan';
+			console.error(
+				'Failed to load customers/activity summary:',
+				customersResult.reason || activityResult.reason
 			);
-		}
-
-		if (activityResult.status === 'rejected') {
-			console.error('Failed to load activity summary:', activityResult.reason);
-			newErrors.push(
-				`Belum Transaksi Bulan Ini gagal dimuat: ${activityResult.reason?.message || 'Terjadi kesalahan'}`
-			);
+			newErrors.push(`Belum Transaksi Bulan Ini gagal dimuat: ${reason}`);
 		}
 
 		errors = newErrors;
@@ -142,7 +141,7 @@
 			<div class="mb-6 border-l-4 border-red-600 bg-red-50 p-4">
 				<p class="text-sm font-medium text-red-800">Sebagian data gagal dimuat:</p>
 				<ul class="mt-1 list-disc space-y-0.5 pl-5 text-sm text-red-700">
-					{#each errors as err (err)}
+					{#each errors as err, i (i)}
 						<li>{err}</li>
 					{/each}
 				</ul>
