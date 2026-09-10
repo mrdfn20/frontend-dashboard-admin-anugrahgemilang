@@ -1,6 +1,12 @@
 <script>
 	import { onMount } from 'svelte';
 	import { api } from '$lib/services/api';
+	import { auth } from '$lib/stores/auth';
+
+	function displayName(username) {
+		if (!username) return '';
+		return username.charAt(0).toUpperCase() + username.slice(1);
+	}
 
 	let summary = null;
 	let incomeSummary = null;
@@ -45,7 +51,7 @@
 				? 'pagi'
 				: new Date().getHours() < 18
 					? 'siang'
-					: 'malam'}, CV Anugrah Gemilang
+					: 'malam'}{$auth.user?.username ? `, ${displayName($auth.user.username)}` : ''}
 		</h1>
 		<p class="text-gray-500">
 			{new Date().toLocaleDateString('id-ID', {

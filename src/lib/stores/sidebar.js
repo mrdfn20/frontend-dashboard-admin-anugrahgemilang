@@ -286,18 +286,21 @@ export const sidebar = createSidebarStore();
 
 // 🆕 Class siap-pakai buat modal/overlay `fixed inset-0` - sidebar itu sendiri `fixed`,
 // jadi modal yang "centered" secara matematis di FULL viewport keliatan geser ke kanan
-// begitu sidebar (256px, w-64) nutupin sebagian kiri layar. Samain pola-nya kayak area
-// konten utama (`ml-64` pas sidebar kebuka di desktop) supaya modal ke-center di AREA
-// YANG KELIATAN, bukan di full viewport. Dipakai persis: `class="... {$sidebarOffsetClass}"`.
+// begitu sidebar (256px, w-64) nutupin sebagian kiri layar. Dipakai persis di div
+// terluar modal: `class="fixed inset-0 ... {$sidebarOffsetClass}"`.
 //
-// 🐛 Bug ditemuin user (2026-09-10): dulu ditulis `lg:ml-64` (breakpoint Tailwind
-// 1024px) - tapi `isMobile` di store ini dihitung manual dari `window.innerWidth < 768`
-// (lihat checkIsMobile()), BUKAN dari breakpoint Tailwind. Jadi di lebar layar
-// 768px-1023px, sidebar kebuka (isMobile=false) tapi class `lg:ml-64` BELUM aktif
-// (breakpoint-nya belum ke-capai) - modal jadi gak digeser padahal sidebar udah
-// nutupin sebagian layar. Konten utama (+layout.svelte) sendiri pakai `ml-64` POLOS
-// tanpa prefix breakpoint apapun (soalnya kondisinya udah dihitung di JS, redundant
-// kalau ditambah breakpoint CSS lagi) - disamain persis di sini.
+// 🐛 Riwayat bug (user, 2026-09-10):
+// - Percobaan 1: `lg:ml-64` - breakpoint Tailwind (1024px) gak nyambung sama `isMobile`
+//   yang dihitung dari `window.innerWidth < 768`. Zona 768-1023px sidebar kebuka tapi
+//   margin gak aktif.
+// - Percobaan 2: `ml-64` polos - MASIH geser. `margin-left` di elemen `position: fixed`
+//   yang di-pin ke `inset-0` (left:0 + right:0) perilakunya gak reliable antar browser
+//   buat "nyempitin dari kiri".
+// - Sekarang: `pl-64` (padding-left). Div terluar tetap full-screen (backdrop & area
+//   scroll-nya bener), tapi KONTEN di dalamnya (flex justify-center + panel modal)
+//   kedorong ke kanan 16rem, jadi ke-center di area yang keliatan. Padding di elemen
+//   fixed itu reliable (beda dari margin). Backdrop `<div class="fixed inset-0">` di
+//   dalamnya tetap full-screen krn dia fixed sendiri, gak kepengaruh padding parent.
 export const sidebarOffsetClass = derived(sidebar, ($sidebar) =>
-	$sidebar.isOpen && !$sidebar.isMobile && !$sidebar.isLoading ? 'ml-64' : ''
+	$sidebar.isOpen && !$sidebar.isMobile && !$sidebar.isLoading ? 'pl-64' : ''
 );
