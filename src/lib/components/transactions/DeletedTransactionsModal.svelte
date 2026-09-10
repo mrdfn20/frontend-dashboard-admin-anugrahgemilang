@@ -49,8 +49,11 @@
 		></div>
 
 		<div class="relative w-full max-w-2xl transform rounded-lg bg-white shadow-xl transition-all">
-			<div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-				<h3 class="text-lg font-medium text-gray-900">Transaksi Terhapus</h3>
+			<div class="flex items-start justify-between border-b border-gray-200 px-6 py-4">
+				<div>
+					<h3 class="text-lg font-medium text-gray-900">Transaksi Terhapus</h3>
+					<p class="mt-0.5 text-xs text-gray-400">Menampilkan 100 yang paling baru dihapus</p>
+				</div>
 				<button on:click={handleClose} class="text-gray-400 hover:text-gray-600">
 					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
