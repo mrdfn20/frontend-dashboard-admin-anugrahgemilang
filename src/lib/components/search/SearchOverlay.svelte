@@ -70,7 +70,10 @@
 <svelte:window on:keydown={$isOpen ? handleKeydown : undefined} />
 
 {#if $isOpen}
-	<div class="fixed inset-0 z-50 overflow-y-auto {$sidebarOffsetClass}" use:lockBodyScroll>
+	<div
+		class="fixed top-0 right-0 bottom-0 z-50 overflow-y-auto {$sidebarOffsetClass}"
+		use:lockBodyScroll
+	>
 		<div class="flex min-h-screen items-start justify-center px-4 pt-20 pb-6">
 			<div
 				class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"

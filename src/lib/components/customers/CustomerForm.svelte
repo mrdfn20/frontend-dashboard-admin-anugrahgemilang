@@ -130,7 +130,10 @@
 </script>
 
 <!-- Modal Overlay -->
-<div class="fixed inset-0 z-50 overflow-y-auto {$sidebarOffsetClass}" use:lockBodyScroll>
+<div
+	class="fixed top-0 right-0 bottom-0 z-50 overflow-y-auto {$sidebarOffsetClass}"
+	use:lockBodyScroll
+>
 	<div class="flex min-h-screen items-center justify-center px-4 py-6">
 		<!-- Background overlay -->
 		<div

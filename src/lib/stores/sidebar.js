@@ -284,23 +284,18 @@ function createSidebarStore() {
 
 export const sidebar = createSidebarStore();
 
-// 🆕 Class siap-pakai buat modal/overlay `fixed inset-0` - sidebar itu sendiri `fixed`,
-// jadi modal yang "centered" secara matematis di FULL viewport keliatan geser ke kanan
-// begitu sidebar (256px, w-64) nutupin sebagian kiri layar. Dipakai persis di div
-// terluar modal: `class="fixed inset-0 ... {$sidebarOffsetClass}"`.
+// 🆕 Class siap-pakai buat div TERLUAR modal - sidebar itu sendiri `fixed` w-64, jadi
+// modal yang "centered" di full viewport keliatan geser ke kanan. Div terluar modal
+// SEKARANG pakai `fixed top-0 right-0 bottom-0` (BUKAN `inset-0` lagi), dan class ini
+// yang nentuin posisi kirinya: `left-64` pas sidebar kebuka (mepet ke tepi sidebar),
+// `left-0` pas ketutup. Dipakai: `class="fixed top-0 right-0 bottom-0 ... {$sidebarOffsetClass}"`.
 //
-// 🐛 Riwayat bug (user, 2026-09-10):
-// - Percobaan 1: `lg:ml-64` - breakpoint Tailwind (1024px) gak nyambung sama `isMobile`
-//   yang dihitung dari `window.innerWidth < 768`. Zona 768-1023px sidebar kebuka tapi
-//   margin gak aktif.
-// - Percobaan 2: `ml-64` polos - MASIH geser. `margin-left` di elemen `position: fixed`
-//   yang di-pin ke `inset-0` (left:0 + right:0) perilakunya gak reliable antar browser
-//   buat "nyempitin dari kiri".
-// - Sekarang: `pl-64` (padding-left). Div terluar tetap full-screen (backdrop & area
-//   scroll-nya bener), tapi KONTEN di dalamnya (flex justify-center + panel modal)
-//   kedorong ke kanan 16rem, jadi ke-center di area yang keliatan. Padding di elemen
-//   fixed itu reliable (beda dari margin). Backdrop `<div class="fixed inset-0">` di
-//   dalamnya tetap full-screen krn dia fixed sendiri, gak kepengaruh padding parent.
+// 🐛 Riwayat bug (user, 2026-09-10) - 3 percobaan gagal sebelum ini:
+// - `lg:ml-64`: breakpoint Tailwind (1024px) gak nyambung sama `isMobile` (<768px).
+// - `ml-64` polos: margin di elemen `position:fixed inset-0` gak reliable nyempitin.
+// - `pl-64`: padding-nya juga gak keliatan ngefek (kemungkinan `inset-0` shorthand
+//   ngunci width duluan). Sekarang: buang `inset-0`, pakai `left`/`right` eksplisit -
+//   posisi elemennya beneran mulai dari x=16rem, gak ada trik margin/padding.
 export const sidebarOffsetClass = derived(sidebar, ($sidebar) =>
-	$sidebar.isOpen && !$sidebar.isMobile && !$sidebar.isLoading ? 'pl-64' : ''
+	$sidebar.isOpen && !$sidebar.isMobile && !$sidebar.isLoading ? 'left-64' : 'left-0'
 );
