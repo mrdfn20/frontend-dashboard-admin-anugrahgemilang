@@ -12,6 +12,7 @@
 		roleFilter
 	} from '$lib/stores/auditLogs.js';
 	import { userActions, users } from '$lib/stores/users.js';
+	import { auth } from '$lib/stores/auth.js';
 	import { infiniteScroll } from '$lib/actions/infiniteScroll.js';
 
 	let expandedId = null;
@@ -19,8 +20,16 @@
 	let searchDebounceTimer;
 
 	onMount(async () => {
-		// allSettled (bukan all) - lihat catatan di halaman Transaksi.
-		await Promise.allSettled([userActions.loadUsers(), auditLogActions.loadLogs()]);
+		// 🆕 GET /user (loadUsers) Admin-only - sebelumnya dipanggil buat SEMUA role yang
+		// buka Audit Log (termasuk Editor, yang bakal 403), padahal sekarang nama user udah
+		// dikirim langsung dari backend (log.username) jadi lookup ini gak wajib lagi.
+		// Tetap dipanggil kalau Admin (masih dipakai sbg fallback usersById), di-skip kalau
+		// bukan - biar gak nembak request yang emang bakal ditolak.
+		const loaders = [auditLogActions.loadLogs()];
+		if ($auth.user?.role === 'Admin') {
+			loaders.push(userActions.loadUsers());
+		}
+		await Promise.allSettled(loaders);
 	});
 
 	// Bangun peta user_id -> username begitu daftar user selesai dimuat
@@ -159,7 +168,7 @@
 								{formatDateTime(log.timestamp)}
 							</td>
 							<td class="px-4 py-3 text-sm whitespace-nowrap text-gray-900">
-								{$usersById[log.user_id] || `#${log.user_id}`}
+								{log.username || $usersById[log.user_id] || `#${log.user_id}`}
 								<span class="ml-1 text-xs text-gray-400">({log.role})</span>
 							</td>
 							<td class="px-4 py-3 text-sm whitespace-nowrap">

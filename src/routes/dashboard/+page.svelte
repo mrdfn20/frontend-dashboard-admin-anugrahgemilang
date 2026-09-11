@@ -205,19 +205,31 @@
 					<p class="text-sm text-gray-500">Pendapatan Hari Ini</p>
 					<p class="text-2xl font-semibold">{formatCurrency(incomeSummary?.income_today || 0)}</p>
 					<div class="mt-2 flex items-center">
-						<span
-							class={incomeSummary?.income_today > incomeSummary?.income_yesterday
-								? 'text-green-500'
-								: 'text-red-500'}
-						>
-							{incomeSummary?.income_today > incomeSummary?.income_yesterday ? '↑' : '↓'}
-							{Math.abs(
-								(((incomeSummary?.income_today || 0) - (incomeSummary?.income_yesterday || 0)) /
-									(incomeSummary?.income_yesterday || 1)) *
-									100
-							).toFixed(1)}%
-						</span>
-						<span class="ml-2 text-xs text-gray-500">dari kemarin</span>
+						{#if incomeSummary?.income_yesterday > 0}
+							<!-- Persentase cuma masuk akal kalau ada dasar pembanding (kemarin > 0) -->
+							<span
+								class={incomeSummary?.income_today > incomeSummary?.income_yesterday
+									? 'text-green-500'
+									: 'text-red-500'}
+							>
+								{incomeSummary?.income_today > incomeSummary?.income_yesterday ? '↑' : '↓'}
+								{Math.abs(
+									((incomeSummary.income_today - incomeSummary.income_yesterday) /
+										incomeSummary.income_yesterday) *
+										100
+								).toFixed(1)}%
+							</span>
+							<span class="ml-2 text-xs text-gray-500">dari kemarin</span>
+						{:else if incomeSummary?.income_today > 0}
+							<!-- 🐛 Bug ditemuin user (2026-09-11): kemarin dipaksa jadi 1 kalau 0 (biar
+							     gak dibagi nol), hasilnya persentase ngaco (bisa jutaan %) begitu kemarin
+							     BENERAN 0. Gak ada dasar persentase yang masuk akal di kondisi ini -
+							     tampilkan teks netral aja. -->
+							<span class="text-green-500">↑ Baru hari ini</span>
+							<span class="ml-2 text-xs text-gray-500">(kemarin Rp0)</span>
+						{:else}
+							<span class="text-xs text-gray-400">Belum ada pemasukan 2 hari ini</span>
+						{/if}
 					</div>
 				</div>
 

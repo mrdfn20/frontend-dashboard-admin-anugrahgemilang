@@ -1,10 +1,18 @@
 <!-- src/routes/dashboard/regions/+page.svelte -->
 <script>
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { auth } from '$lib/stores/auth';
 	import { regionActions, regions, subRegions, isLoading, error } from '$lib/stores/regions.js';
 	import RegionForm from '$lib/components/regions/RegionForm.svelte';
 	import SubRegionForm from '$lib/components/regions/SubRegionForm.svelte';
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
+
+	// 🐛 Bug ditemuin user (2026-09-11): sama kayak halaman Armada - gak ada guard,
+	// Editor bisa buka via URL manual & lihat semua data Kecamatan/Sub-Wilayah.
+	$: if ($auth.user && $auth.user.role !== 'Admin') {
+		goto('/dashboard');
+	}
 
 	let showRegionForm = false;
 	let selectedRegion = null;
@@ -16,6 +24,7 @@
 	let deleteErrorMessage = '';
 
 	onMount(async () => {
+		if ($auth.user?.role !== 'Admin') return;
 		await regionActions.loadAll();
 	});
 

@@ -305,48 +305,54 @@
 				</div>
 			</div>
 
-			<div class="flex flex-shrink-0 gap-2">
-				<button
-					on:click={handleEdit}
-					class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-					title="Edit"
-				>
-					<svg
-						class="inline h-4 w-4 sm:mr-1.5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+			{#if $auth.user?.role === 'Admin'}
+				<!-- 🐛 Bug ditemuin user (2026-09-11): Edit/Hapus di halaman DETAIL pelanggan
+				     kelewat pas fix yang sama diterapin ke halaman LIST kemarin - Driver masih
+				     bisa lihat tombolnya di sini (backend tetap nolak Admin-only, tapi harusnya
+				     disembunyikan juga biar konsisten). -->
+				<div class="flex flex-shrink-0 gap-2">
+					<button
+						on:click={handleEdit}
+						class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+						title="Edit"
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-						/>
-					</svg>
-					<span class="hidden sm:inline">Edit</span>
-				</button>
-				<button
-					on:click={handleDelete}
-					class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-					title="Hapus"
-				>
-					<svg
-						class="inline h-4 w-4 sm:mr-1.5"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+						<svg
+							class="inline h-4 w-4 sm:mr-1.5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+							/>
+						</svg>
+						<span class="hidden sm:inline">Edit</span>
+					</button>
+					<button
+						on:click={handleDelete}
+						class="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+						title="Hapus"
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-						/>
-					</svg>
-					<span class="hidden sm:inline">Hapus</span>
-				</button>
-			</div>
+						<svg
+							class="inline h-4 w-4 sm:mr-1.5"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+							/>
+						</svg>
+						<span class="hidden sm:inline">Hapus</span>
+					</button>
+				</div>
+			{/if}
 		{:else}
 			<h1 class="text-lg font-semibold text-gray-900">Detail Pelanggan</h1>
 		{/if}

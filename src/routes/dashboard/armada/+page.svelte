@@ -1,6 +1,8 @@
 <!-- src/routes/dashboard/armada/+page.svelte -->
 <script>
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { auth } from '$lib/stores/auth';
 	import { armadaActions, armadas, isLoading, error } from '$lib/stores/armada.js';
 	import ArmadaForm from '$lib/components/armada/ArmadaForm.svelte';
 	import ConfirmationModal from '$lib/components/ui/ConfirmationModal.svelte';
@@ -11,7 +13,16 @@
 	let isDeleting = false;
 	let deleteErrorMessage = '';
 
+	// 🐛 Bug ditemuin user (2026-09-11): halaman ini gak punya guard sama sekali - Editor
+	// (nav-nya udah nyembunyiin link ke sini) tetep bisa buka lewat ketik URL manual, dan
+	// lihat SEMUA data armada + tombol Edit/Hapus/Tambah (walau nulis-nya tetap ketolak
+	// backend). Redirect di awal biar konsisten sama halaman lain yang Admin-only.
+	$: if ($auth.user && $auth.user.role !== 'Admin') {
+		goto('/dashboard');
+	}
+
 	onMount(async () => {
+		if ($auth.user?.role !== 'Admin') return;
 		await armadaActions.loadArmadas();
 	});
 

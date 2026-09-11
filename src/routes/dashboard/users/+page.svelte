@@ -1,6 +1,7 @@
 <!-- src/routes/dashboard/users/+page.svelte -->
 <script>
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { userActions, users, isLoading, error } from '$lib/stores/users.js';
 	import { auth } from '$lib/stores/auth.js';
 	import UserForm from '$lib/components/users/UserForm.svelte';
@@ -11,7 +12,16 @@
 	let selectedUser = null;
 	let isDeleting = false;
 
+	// 🐛 Bug ditemuin user (2026-09-11): Driver akses /dashboard/users via URL manual -
+	// data-nya ketolak backend (403), TAPI shell halaman (judul + tombol "+ Tambah User")
+	// tetep kerender krn tombolnya gak pernah digantungin ke state loading/error. Sama
+	// pola guard yang dipasang juga di halaman Armada & Wilayah.
+	$: if ($auth.user && $auth.user.role !== 'Admin') {
+		goto('/dashboard');
+	}
+
 	onMount(async () => {
+		if ($auth.user?.role !== 'Admin') return;
 		await userActions.loadUsers();
 	});
 
