@@ -55,6 +55,17 @@ export const todayTransactions = derived(transactions, ($transactions) => {
  * Transaction Store Actions
  * Semua fungsi untuk manipulasi data transaction
  */
+// Nomor urut permintaan loadPage() yang aktif - dipakai buat buang hasil fetch yang udah
+// "basi" (ke-superseded sama panggilan loadPage() lain yang lebih baru) sebelum sempat
+// nge-update store. Perlu karena transactions/pagination/hasMore itu store singleton level-
+// modul yang gak otomatis ke-reset pas komponen halaman di-destroy: kalau user pindah dari
+// halaman Transaksi pas scroll-fetch masih nunggu respons lalu balik lagi ke halaman itu,
+// fetch lama yang baru selesai belakangan bisa nge-append data basi ke list yang udah di-
+// reset sama kunjungan baru (atau 2 scroll-trigger yang nembak bareng ngambil halaman yang
+// SAMA 2x) - hasilnya transaction.id duplikat di store, bikin keyed {#each} di
+// TransactionTable/TransactionCard crash (halaman jadi blank putih & gak bisa dibuka lagi).
+let loadPageRequestSeq = 0;
+
 export const transactionActions = {
 	/**
 	 * Load 1 halaman transaksi dari server sesuai filter aktif.
@@ -64,6 +75,8 @@ export const transactionActions = {
 	 */
 	async loadPage({ reset = false } = {}) {
 		if (!reset && !get(hasMore)) return; // gak ada halaman berikutnya
+
+		const requestId = ++loadPageRequestSeq;
 
 		isLoading.set(true);
 		error.set(null);
@@ -88,6 +101,10 @@ export const transactionActions = {
 
 			const { data, meta } = await api.transactions.getByFilterPaginated(params);
 
+			// Udah ke-superseded sama panggilan loadPage() yang lebih baru - buang hasilnya,
+			// jangan sentuh store (lihat catatan `loadPageRequestSeq` di atas).
+			if (requestId !== loadPageRequestSeq) return;
+
 			if (reset) {
 				transactions.set(data);
 			} else {
@@ -100,11 +117,15 @@ export const transactionActions = {
 
 			return data;
 		} catch (err) {
-			error.set(err.message);
+			if (requestId === loadPageRequestSeq) {
+				error.set(err.message);
+			}
 			console.error('Failed to load transactions:', err);
 			throw err;
 		} finally {
-			isLoading.set(false);
+			if (requestId === loadPageRequestSeq) {
+				isLoading.set(false);
+			}
 		}
 	},
 
