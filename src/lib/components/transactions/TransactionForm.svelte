@@ -251,10 +251,35 @@
 								on:select={(e) => selectCustomer(e.detail)}
 							>
 								<svelte:fragment slot="item" let:item>
-									<span class="text-gray-900">
-										#{item.id} - {item.customer_name}
+									<span class="self-start text-gray-900">
+										<span class="block">#{item.id} - {item.customer_name}</span>
+										{#if item.sub_region_name}
+											<span class="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+												<svg
+													class="h-3 w-3 shrink-0"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+													aria-hidden="true"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
+													/>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
+													/>
+												</svg>
+												{item.sub_region_name}
+											</span>
+										{/if}
 									</span>
-									<span class="text-maroon-600 ml-2 shrink-0 font-medium">
+									<span class="text-maroon-600 ml-2 shrink-0 self-start font-medium">
 										{formatRp(item.price)}/galon
 									</span>
 								</svelte:fragment>
